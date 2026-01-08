@@ -1,0 +1,29 @@
+# Reutiliza el entorno conda `tfg-baloncesto` (ya tiene todo instalado).
+# Este fichero documenta las dependencias del pipeline tfg-junio.
+
+# Núcleo
+torch
+numpy
+opencv-python
+supervision==0.27.0
+
+# Detección (RF-DETR local) + cancha (YOLO-pose)
+rfdetr
+ultralytics
+
+# Tracking por máscara (SAM 3 vía transformers) y OCR de dorsal (SmolVLM2)
+transformers>=5
+pillow
+
+# Equipos sin etiquetas (SigLIP + UMAP + K-means) y utilidades del cuaderno
+# (ConsecutiveValueTracker, clean_paths, ViewTransformer)
+sports @ git+https://github.com/roboflow/sports.git@feat/basketball
+umap-learn
+scikit-learn
+
+# Entrenamiento del OCR de dorsal
+peft
+
+# Descarga de datasets de Roboflow (solo entrenamiento, no runtime)
+roboflow
+python-dotenv

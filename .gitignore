@@ -1,0 +1,23 @@
+# Modelos y datos (pesados / enlazados)
+models/
+data/
+*.engine
+*.pth
+*.ckpt
+*.pt
+*.safetensors
+
+# Secretos
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Salidas de vídeo
+*.mp4
+*.avi
+*.mov
