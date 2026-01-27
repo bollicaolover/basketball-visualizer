@@ -1,6 +1,6 @@
-# Modelos y datos (pesados / enlazados)
-models/
-data/
+# Modelos y datos (pesados / enlazados) — anclados a la raíz del repo
+/models/
+/data/
 *.engine
 *.pth
 *.ckpt
@@ -21,3 +21,15 @@ __pycache__/
 *.mp4
 *.avi
 *.mov
+
+# Logs de ejecución
+*.log
+
+# Documentos de referencia externos
+*.pdf
+
+# Frontend: entorno de build aislado (Node portable) y dependencias
+frontend/.node/
+frontend/node_modules/
+# Nota: frontend/dist/ SÍ se versiona (lo sirve el backend en producción).
+frontend_backup_*.tar.gz
