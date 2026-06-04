@@ -25,8 +25,9 @@ __pycache__/
 # Logs de ejecución
 *.log
 
-# Documentos de referencia externos
+# Documentos y cuadernos de referencia externos
 *.pdf
+copia_de_*.py
 
 # Frontend: entorno de build aislado (Node portable) y dependencias
 frontend/.node/
