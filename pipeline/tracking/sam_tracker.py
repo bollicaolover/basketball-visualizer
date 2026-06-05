@@ -94,10 +94,6 @@ class SAMTracker(ITracker):
         self._next_sam_obj_id: int = 1
         self._initialized: bool = False
         self._original_size: Optional[Any] = None
-        # Índice de frame RELATIVO a la sesión (0 al reiniciarla). El prompt
-        # debe condicionar en este índice, no en el global: tras un reinicio a
-        # mitad de vídeo la sesión nueva empieza a contar desde 0.
-        self._session_frame: int = 0
 
     # ------------------------------------------------------------------
     # ITracker hooks
@@ -118,7 +114,6 @@ class SAMTracker(ITracker):
         self._next_sam_obj_id = 1
         self._initialized = False
         self._original_size = None
-        self._session_frame = 0
 
     def update(self, frame_bgr: np.ndarray, frame_idx: int) -> List[TrackedEntity]:
         if self._session is None:
@@ -139,8 +134,7 @@ class SAMTracker(ITracker):
             self._original_size = inputs.original_sizes[0]
 
         if not self._initialized:
-            # Prompt en el índice relativo a la sesión (0 tras un reinicio).
-            self._prompt_with_yolo(frame_bgr, self._session_frame)
+            self._prompt_with_yolo(frame_bgr, frame_idx)
             # Sólo "inicializado" cuando hay al menos un prompt; si YOLO no
             # detectó nada en este frame, reintentaremos en el siguiente.
             self._initialized = bool(self._sam_to_track)
@@ -157,7 +151,6 @@ class SAMTracker(ITracker):
                 frame=inputs.pixel_values[0],
             )
 
-        self._session_frame += 1
         return self._entities_from_output(sam_output)
 
     def reset(self) -> None:
@@ -166,7 +159,6 @@ class SAMTracker(ITracker):
         self._next_sam_obj_id = 1
         self._initialized = False
         self._original_size = None
-        self._session_frame = 0
 
     # ------------------------------------------------------------------
     # Internals
