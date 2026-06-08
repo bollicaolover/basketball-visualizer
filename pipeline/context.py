@@ -33,6 +33,7 @@ class FrameContext:
     number_detections: Optional[sv.Detections] = None  # subset NUMBER_CLASS (RF-DETR)
     ball_detections: Optional[sv.Detections] = None     # subset BALL_CLASSES
     hoop_detections: Optional[sv.Detections] = None     # subset RIM_CLASS
+    referee_detections: Optional[sv.Detections] = None  # subset REFEREE_CLASS
     # Entidades trackeadas por SAM (bbox + máscara + track_id estable).
     tracked_entities: List["TrackedEntity"] = field(default_factory=list)
 

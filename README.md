@@ -49,6 +49,34 @@ python scripts/train_jersey_ocr.py --data data/jersey-numbers --epochs 5
 python run.py data/clip.mp4 -o data/out.mp4
 ```
 
+## Roster (nombres de jugador + colores de equipo)
+
+Opcional. Un JSON indexado por **nombre de equipo**, con el color de la
+camiseta y el mapeo `dorsal → nombre`:
+
+```json
+{
+  "Boston Celtics":  { "colors": "#FFFFFF", "players": { "0": "Tatum", "7": "Brown" } },
+  "New York Knicks": { "colors": "#1D428A", "players": { "11": "Brunson", "23": "Robinson" } }
+}
+```
+
+- `colors` debe ser el color de la **camiseta que se juega ese partido** (no el
+  de marca): se usa para emparejar cada equipo con el cluster detectado y asignar
+  los nombres al equipo claro/oscuro de forma automática (no posicional).
+- `players` resuelve el nombre cruzando equipo + dorsal (del OCR).
+
+Por CLI:
+
+```bash
+python run.py data/clip.mp4 -o data/out.mp4 --roster data/roster.json
+```
+
+En la app web el roster se sube en el panel lateral (opcional): los nombres de
+jugador y equipo y los colores se aplican automáticamente al resultado. La capa
+interactiva del frontend reorienta además por coincidencia de dorsales, de modo
+que el equipo claro/oscuro queda correcto aunque el color del roster no encaje.
+
 ## Estructura
 
 - `pipeline/detection/` — RF-DETR local (11 clases).
@@ -58,6 +86,11 @@ python run.py data/clip.mp4 -o data/out.mp4
 - `pipeline/court/`     — keypoints, homografía, render del mapa 2D (portado).
 - `pipeline/orchestrator.py` — bucle por frame que une todas las etapas.
 - `scripts/`            — fetch de modelos, descarga de datasets y entrenamientos.
+- `frontend/` + `backend/` — aplicación web (SPA Vue 3 + API FastAPI).
+
+> **Para modificar la app**, consulta [`docs/arquitectura.md`](docs/arquitectura.md):
+> estructura completa de frontend, backend y pipeline, convenciones del código y
+> una tabla "quiero cambiar X, ¿dónde toco?".
 
 ## Modelos
 

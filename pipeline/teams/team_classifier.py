@@ -32,6 +32,12 @@ class TeamClassifier:
         self._tc = SportsTeamClassifier(device=settings.device)
         self._fitted = False
         self._votes = ConsecutiveValueTracker(n_consecutive=settings.votes_to_lock)
+        # Cluster (0/1) correspondiente al equipo de camiseta clara. K-means
+        # asigna el índice de cluster de forma arbitraria, así que tras `fit`
+        # se orienta por luminancia para que 'white'/team_names[0] sea siempre
+        # el equipo más claro (None = sin orientar → identidad).
+        self._white_cluster: Optional[int] = None
+        self._cluster_color: dict = {}   # cluster crudo → color medio BGR de camiseta
 
     @property
     def fitted(self) -> bool:
@@ -66,6 +72,54 @@ class TeamClassifier:
             warnings.filterwarnings("ignore", message="The channel dimension is ambiguous")
             self._tc.fit(crops)
         self._fitted = True
+        self._orient_by_brightness(crops)
+
+    def _orient_by_brightness(self, crops: List[np.ndarray]) -> None:
+        """Fija qué cluster es el de camiseta clara comparando la luminancia
+        media de los recortes. Hace determinista el mapeo cluster→'white'/'dark'
+        (el más claro → 'white'), en vez de depender del índice de K-means."""
+        if not self._fitted or not crops:
+            return
+        with open(os.devnull, "w") as devnull, contextlib.redirect_stderr(devnull), \
+                warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Kwargs passed to")
+            warnings.filterwarnings("ignore", message="The channel dimension is ambiguous")
+            preds = self._tc.predict(crops)
+        sums: dict = {}
+        counts: dict = {}
+        colsums: dict = {}   # tid -> np.array([B, G, R]) acumulado
+        for crop, t in zip(crops, preds):
+            tid = int(t)
+            sums[tid] = sums.get(tid, 0.0) + float(crop.mean())
+            counts[tid] = counts.get(tid, 0) + 1
+            chan = crop.reshape(-1, 3).mean(axis=0)  # color medio BGR del recorte
+            colsums[tid] = colsums.get(tid, np.zeros(3)) + chan
+        means = {tid: sums[tid] / counts[tid] for tid in sums if counts[tid]}
+        # Color medio de camiseta por cluster (BGR), para emparejar con el roster.
+        self._cluster_color = {
+            tid: (colsums[tid] / counts[tid]) for tid in colsums if counts[tid]
+        }
+        if len(means) < 2:
+            return
+        self._white_cluster = max(means, key=means.get)
+        print(f"[INFO] equipos orientados por brillo: cluster {self._white_cluster} "
+              f"= camiseta clara (luminancia {means})", flush=True)
+
+    def _semantic_id(self, raw_tid: int) -> int:
+        """Cluster crudo de K-means → índice semántico (0=clara, 1=oscura)."""
+        if self._white_cluster is None:
+            return raw_tid
+        return 0 if raw_tid == self._white_cluster else 1
+
+    def _raw_for_semantic(self, sid: int) -> int:
+        """Índice semántico (0=clara, 1=oscura) → cluster crudo de K-means."""
+        if self._white_cluster is None:
+            return sid
+        return self._white_cluster if sid == 0 else (1 - self._white_cluster)
+
+    def semantic_mean_color(self, sid: int):
+        """Color medio de camiseta (BGR) del equipo claro (sid=0)/oscuro (sid=1)."""
+        return self._cluster_color.get(self._raw_for_semantic(sid))
 
     # ------------------------------------------------------------------
     def update(self, frame_bgr: np.ndarray, entities: List[TrackedEntity]) -> None:
@@ -99,11 +153,12 @@ class TeamClassifier:
         tid = self.team_id(track_id)
         if tid is None:
             return None
-        return "white" if tid == 0 else "dark"
+        return "white" if self._semantic_id(tid) == 0 else "dark"
 
     def team_name(self, track_id: int) -> Optional[str]:
         tid = self.team_id(track_id)
         if tid is None:
             return None
         names = self._s.team_names
-        return names[tid] if 0 <= tid < len(names) else None
+        sid = self._semantic_id(tid)
+        return names[sid] if 0 <= sid < len(names) else None
