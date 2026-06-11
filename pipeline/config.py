@@ -13,7 +13,7 @@ son las mismas que consumen los módulos portados en `pipeline/court/*` y
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import FrozenSet, Tuple
+from typing import FrozenSet, Optional, Tuple
 
 from pipeline.court.smoothing import SmoothingSettings
 
@@ -169,6 +169,11 @@ class ScoreSettings:
     cooldown_frames: int = 30
     # Frames que se mantiene el resalte del resultado en vídeo y mapa.
     display_frames: int = 25
+    # Máxima distancia (en alturas del aro) entre el balón REAL y el aro para
+    # que una detección `ball-in-basket` sea creíble. El detector alucina cajas
+    # ball-in-basket sobre el aro aunque el balón esté lejos; este cruce con la
+    # posición real del balón descarta esos falsos positivos.
+    bib_ball_max_rim_dist: float = 2.5
 
 
 # ---------------------------------------------------------------------------
@@ -291,20 +296,20 @@ class RenderSettings:
     map_height_px: int = 540
     padding_ft: float = 4.0
 
-    background_bgr: Tuple[int, int, int] = (37, 21, 17)
-    floor_bgr: Tuple[int, int, int] = (142, 178, 208)
-    key_bgr: Tuple[int, int, int] = (98, 132, 172)
-    line_bgr: Tuple[int, int, int] = (248, 250, 252)
-    rim_bgr: Tuple[int, int, int] = (0, 120, 245)
+    background_bgr: Tuple[int, int, int] = (107, 41,  0)   # #00296b navy profundo
+    floor_bgr:      Tuple[int, int, int] = (168, 91, 26)   # #1a5ba8 azul medio
+    key_bgr:        Tuple[int, int, int] = (188,112, 36)   # #2470bc azul claro (zona)
+    line_bgr:       Tuple[int, int, int] = (252, 250, 248) # blanco cálido
+    rim_bgr:        Tuple[int, int, int] = (  0, 197, 253) # #fdc500 dorado
     line_thickness: int = 2
-    floor_plank_spacing_px: int = 14
-    floor_plank_shade_bgr: Tuple[int, int, int] = (128, 162, 192)
+    floor_plank_spacing_px: int = 22
+    floor_plank_shade_bgr:  Tuple[int, int, int] = (158, 82, 20)  # sombra veta sutil
 
     player_radius_px: int = 11
-    player_outline_bgr: Tuple[int, int, int] = (0, 0, 0)
-    team_white_fill_bgr: Tuple[int, int, int] = (0, 0, 255)
-    team_dark_fill_bgr: Tuple[int, int, int] = (255, 255, 0)
-    team_unknown_fill_bgr: Tuple[int, int, int] = (166, 184, 20)
+    player_outline_bgr:     Tuple[int, int, int] = (20,  10,   0) # casi negro
+    team_white_fill_bgr:    Tuple[int, int, int] = (136, 63,   0) # #003f88 navy (home)
+    team_dark_fill_bgr:     Tuple[int, int, int] = (  0, 197, 253) # #fdc500 dorado (visitor)
+    team_unknown_fill_bgr:  Tuple[int, int, int] = (157, 80,   0) # #00509d azul
 
     # Dibujar el punto del balón en el mapa 2D. Desactivado: solo se representa
     # la posesión (anillo alrededor del jugador poseedor), no el balón — su
@@ -312,14 +317,14 @@ class RenderSettings:
     # vuelve a dibujar el balón proyectado.
     draw_possession_ball: bool = False
     possession_ball_radius_px: int = 7
-    possession_ball_bgr: Tuple[int, int, int] = (0, 140, 255)
-    possessor_ring_bgr: Tuple[int, int, int] = (0, 215, 255)
+    possession_ball_bgr:    Tuple[int, int, int] = (  0, 197, 253) # #fdc500 dorado
+    possessor_ring_bgr:     Tuple[int, int, int] = (  0, 213, 255) # #ffd500 amarillo
     possessor_ring_thickness: int = 4
 
-    # Resalte del resultado del tiro (verde = acierto, rojo = fallo).
+    # Resalte del resultado del tiro (dorado = acierto, plateado = fallo).
     score_rim_highlight_radius_px: int = 14
-    made_rim_highlight_bgr: Tuple[int, int, int] = (60, 200, 60)
-    missed_rim_highlight_bgr: Tuple[int, int, int] = (60, 60, 230)
+    made_rim_highlight_bgr:   Tuple[int, int, int] = (  0, 197, 253) # #fdc500 dorado
+    missed_rim_highlight_bgr: Tuple[int, int, int] = (200, 200, 200) # gris plateado
     made_label: str = "CANASTA"
     missed_label: str = "FALLO"
 
@@ -342,7 +347,11 @@ class Settings:
 
     write_overlay_video: bool = True
     write_map_video: bool = True
-    progress_every: int = 50
+    write_metadata: bool = False
+    # Nombres de equipo provistos por el usuario (CLI --team-names) para volcar
+    # en la metadata. None = no provistos → el frontend usa "Equipo 1/2".
+    metadata_team_names: Optional[Tuple[str, str]] = None
+    progress_every: int = 1
     # Desglose de tiempos por etapa al terminar el vídeo.
     profile: bool = True
     # Sincroniza la GPU en cada frontera de etapa (medición exacta pero más

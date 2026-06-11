@@ -115,8 +115,15 @@ class ShotTracker:
         if self._display_left > 0:
             self._display_left -= 1
 
+        at_rim, rim_side = self._ball_at_rim(ball, rims, homography, frame_width)
+
         # Señal de acierto: ball-in-basket por encima del umbral, confirmada.
+        # Validación espacial: el detector alucina cajas `ball-in-basket` justo
+        # sobre el aro aunque el balón real esté lejos. Solo es creíble si el
+        # balón real está cerca del aro (no basta con que la caja bib lo esté).
         bib_box = self._best_box(ball_in_basket)
+        if bib_box is not None and not self._bib_is_credible(bib_box, ball, rims):
+            bib_box = None
         if bib_box is not None:
             self._make_streak += 1
             self._bib_ever_seen = True
@@ -124,7 +131,6 @@ class ShotTracker:
             self._make_streak = 0
         make_now = self._make_streak >= self._s.confirm_frames
 
-        at_rim, rim_side = self._ball_at_rim(ball, rims, homography, frame_width)
         action_box = self._action_box(shot_actions)
         ball_at_basket = at_rim or bib_box is not None
 
@@ -241,6 +247,68 @@ class ShotTracker:
         else:
             idx = 0
         return dets.xyxy[idx].astype(np.float32)
+
+    def _bib_is_credible(
+        self,
+        bib_box: np.ndarray,
+        ball: Optional[sv.Detections],
+        rims: Optional[sv.Detections],
+    ) -> bool:
+        """¿Es creíble una detección ``ball-in-basket``?
+
+        El detector emite cajas ``ball-in-basket`` pegadas al aro aunque el
+        balón real esté al otro lado de la cancha (falso positivo). Solo la
+        consideramos válida si hay un balón real a menos de
+        ``bib_ball_max_rim_dist`` alturas de aro del aro de referencia.
+
+        Sin aro de referencia: aceptamos (no hay escala para juzgar). Pero sin
+        ningún balón detectado cerca del aro, NO es creíble: el detector
+        alucina cajas ``ball-in-basket`` sobre el aro incluso antes de que el
+        balón aparezca en escena.
+        """
+        rim = self._nearest_rim(bib_box, rims)
+        if rim is None:
+            return True
+        if ball is None or len(ball) == 0:
+            return False
+        rc = np.array([(rim[0] + rim[2]) / 2.0, (rim[1] + rim[3]) / 2.0], dtype=np.float32)
+        rh = max(float(rim[3] - rim[1]), 1.0)
+        nearest = min(
+            float(np.hypot((b[0] + b[2]) / 2.0 - rc[0], (b[1] + b[3]) / 2.0 - rc[1])) / rh
+            for b in ball.xyxy
+        )
+        if nearest > self._s.bib_ball_max_rim_dist:
+            if self._debug:
+                print(
+                    f"  [SHOT] ball-in-basket descartado: balón real a "
+                    f"{nearest:.1f} alturas de aro (> {self._s.bib_ball_max_rim_dist})",
+                    flush=True,
+                )
+            return False
+        return True
+
+    def _nearest_rim(
+        self,
+        box: np.ndarray,
+        rims: Optional[sv.Detections],
+    ) -> Optional[np.ndarray]:
+        """Aro válido (sobre umbral) más cercano al centro de ``box``, o ``None``."""
+        if rims is None or len(rims) == 0:
+            return None
+        rconf = rims.confidence
+        bc = np.array([(box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0], dtype=np.float32)
+        best = None
+        best_d = np.inf
+        for i in range(len(rims)):
+            if rconf is not None and float(rconf[i]) < self._s.rim_min_confidence:
+                continue
+            r = rims.xyxy[i]
+            rc = np.array([(r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0], dtype=np.float32)
+            d = float(np.hypot(bc[0] - rc[0], bc[1] - rc[1]))
+            if d < best_d:
+                best_d = d
+                best = r.astype(np.float32)
+        return best
 
     def _action_box(self, dets: Optional[sv.Detections]) -> Optional[np.ndarray]:
         """Caja de acción de tiro (jump-shot/layup-dunk) de mayor confianza."""

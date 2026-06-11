@@ -31,6 +31,7 @@ from pipeline.config import (
     IN_POSSESSION_CLASS,
     NUMBER_CLASS,
     PLAYER_CLASSES,
+    REFEREE_CLASS,
     RIM_CLASS,
     SHOT_ACTION_CLASSES,
     Settings,
@@ -52,6 +53,7 @@ from pipeline.teams.team_classifier import TeamClassifier
 from pipeline.possession.resolver import PossessionResolver
 from pipeline.profiling import StageTimer
 from pipeline.scoring.shot_tracker import ShotTracker
+from pipeline.metadata_writer import MetadataWriter
 from pipeline.tracking.ball_tracker import BallTracker
 from pipeline.tracking.foot_point_mask import MaskFootPoint
 from pipeline.tracking.sam_tracker import SAMTracker
@@ -72,6 +74,13 @@ def _map_output_path(output_path: str) -> str:
 
     root, ext = os.path.splitext(output_path)
     return f"{root}_map{ext or '.mp4'}"
+
+
+def _metadata_output_path(output_path: str) -> str:
+    import os
+
+    root, _ = os.path.splitext(output_path)
+    return f"{root}_metadata.json"
 
 
 class Pipeline:
@@ -116,6 +125,7 @@ class Pipeline:
         print("[STAGE] calibrate teams", flush=True)
         with self.timer.stage("calibración"):
             self._calibrate_teams(input_path)
+            self._orient_names_by_roster_color()
 
         print("[STAGE] decode", flush=True)
         io = self._open_video(input_path)
@@ -127,6 +137,13 @@ class Pipeline:
         out_map = (
             open_video_writer(map_path, io.fps, *self.renderer.canvas_size)
             if self.settings.write_map_video else None
+        )
+        metadata_writer = (
+            MetadataWriter(
+                _metadata_output_path(output_path), io.fps,
+                team_names=self.settings.metadata_team_names,
+            )
+            if self.settings.write_metadata else None
         )
 
         # SAM en modo streaming: reinicia la sesión para este vídeo.
@@ -157,6 +174,8 @@ class Pipeline:
                         out_main.write(ctx.overlay_frame)
                     if out_map is not None and ctx.map_frame is not None:
                         out_map.write(ctx.map_frame)
+                    if metadata_writer is not None:
+                        metadata_writer.write(ctx)
                 frame_index += 1
                 if frame_index % self.settings.progress_every == 0:
                     print(f"  {frame_index}/{io.total_frames} frames", flush=True)
@@ -166,6 +185,9 @@ class Pipeline:
                 out_main.release()
             if out_map is not None:
                 out_map.release()
+            if metadata_writer is not None:
+                print("[STAGE] metadata", flush=True)
+                metadata_writer.close()
 
         print(f"[INFO] Vídeo anotado: {output_path}", flush=True)
         if self.settings.write_map_video:
@@ -277,12 +299,48 @@ class Pipeline:
         self.teams.fit(crops)
 
     # ------------------------------------------------------------------
+    def _orient_names_by_roster_color(self) -> None:
+        """Asigna cada nombre de equipo al cluster correcto comparando el color
+        del roster con el color medio de camiseta detectado. Resuelve qué nombre
+        es el del equipo claro/oscuro de forma determinista (no posicional)."""
+        names = list(self.settings.teams.team_names)
+        if len(names) < 2:
+            return
+        colors = {n: roster_mod.team_color(n) for n in names[:2]}
+        if not all(colors.values()):
+            return  # roster sin colores → se respeta el orden recibido
+        c_white = self.teams.semantic_mean_color(0)  # cluster claro (BGR)
+        c_dark = self.teams.semantic_mean_color(1)   # cluster oscuro (BGR)
+        if c_white is None or c_dark is None:
+            return
+
+        def _hex_bgr(h: str):
+            h = h.lstrip("#")
+            r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+            return np.array([b, g, r], dtype=float)
+
+        def _dist(hex_str, bgr):
+            return float(np.sum((_hex_bgr(hex_str) - bgr) ** 2))
+
+        a, b = names[0], names[1]
+        direct = _dist(colors[a], c_white) + _dist(colors[b], c_dark)
+        swapped = _dist(colors[b], c_white) + _dist(colors[a], c_dark)
+        ordered = (a, b) if direct <= swapped else (b, a)
+        if tuple(names[:2]) != ordered:
+            print(f"[INFO] equipos reorientados por color de roster: "
+                  f"claro={ordered[0]}, oscuro={ordered[1]}", flush=True)
+        self.settings.teams.team_names = ordered
+        if self.settings.metadata_team_names is not None:
+            self.settings.metadata_team_names = ordered
+
+    # ------------------------------------------------------------------
     def _process_frame(self, ctx: FrameContext) -> None:
         with self.timer.stage("detección"):
             raw = self.detector.detect(ctx.frame_bgr)
             ctx.player_detections = self._subset(raw, PLAYER_CLASSES)
             ctx.number_detections = self._subset(raw, {NUMBER_CLASS})
             ctx.hoop_detections = self._subset(raw, {RIM_CLASS})
+            ctx.referee_detections = self._subset(raw, {REFEREE_CLASS})
 
         # 2. Cancha + homografía
         with self.timer.stage("cancha"):

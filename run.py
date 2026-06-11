@@ -20,6 +20,7 @@ def main() -> None:
     ap.add_argument("-o", "--output", default="data/out.mp4", help="vídeo anotado de salida")
     ap.add_argument("--no-overlay", action="store_true", help="no escribir el vídeo anotado")
     ap.add_argument("--no-map", action="store_true", help="no escribir el mapa 2D")
+    ap.add_argument("--metadata", action="store_true", help="escribir metadatos JSON por frame")
     ap.add_argument("--no-numbers", action="store_true", help="desactivar OCR de dorsal")
     ap.add_argument("--clean-paths", action="store_true", help="suavizar trayectorias (sports.clean_paths)")
     ap.add_argument("--progress-every", type=int, default=None, help="avisar cada N frames (por defecto 50)")
@@ -36,6 +37,8 @@ def main() -> None:
         settings.write_overlay_video = False
     if args.no_map:
         settings.write_map_video = False
+    if args.metadata:
+        settings.write_metadata = True
     if args.no_numbers:
         settings.identity.enabled = False
     if args.clean_paths:
