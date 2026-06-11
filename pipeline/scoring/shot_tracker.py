@@ -103,8 +103,15 @@ class ShotTracker:
         possessor_team: Optional[str],
         frame_width: int,
         shot_actions: Optional[sv.Detections] = None,
+        release_now: bool = False,
     ) -> Optional[ShotResult]:
-        """Procesa un frame; devuelve el ``ShotResult`` a mostrar (o ``None``)."""
+        """Procesa un frame; devuelve el ``ShotResult`` a mostrar (o ``None``).
+
+        ``release_now`` es un trigger opcional de **suelta** (de la pose del
+        poseedor, ver ``pipeline.scoring.release_detector``): abre la ventana del
+        tiro en el instante del lanzamiento, como las acciones jump-shot/layup,
+        útil cuando el balón se ocluye y no se ve llegar al aro.
+        """
         if not self._s.enabled:
             return None
 
@@ -146,8 +153,11 @@ class ShotTracker:
         )
 
         if self._phase == "idle":
-            if self._cooldown == 0 and (ball_at_basket or action_box is not None):
-                trigger = "ball_at_rim" if ball_at_basket else "action"
+            if self._cooldown == 0 and (ball_at_basket or action_box is not None or release_now):
+                trigger = (
+                    "ball_at_rim" if ball_at_basket
+                    else ("action" if action_box is not None else "release")
+                )
                 if self._debug:
                     print(f"  [SHOT] frame={frame_index} IDLE→PENDING  trigger={trigger} "
                           f"at_rim={at_rim} bib={bib_box is not None} "
