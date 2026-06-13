@@ -85,18 +85,30 @@ class JerseyNumberOCR:
 
         h, w = frame_bgr.shape[:2]
         player_masks = self._entity_masks(entities, h, w)
-        if player_masks is None:
-            return
+        if player_masks is not None:
+            self._update_via_masks(
+                frame_bgr, number_detections, entities, player_masks, w, h,
+            )
+        else:
+            self._update_via_bboxes(frame_bgr, number_detections, entities)
+
+    def _update_via_masks(
+        self,
+        frame_bgr: np.ndarray,
+        number_detections: sv.Detections,
+        entities: List[TrackedEntity],
+        player_masks: np.ndarray,
+        w: int,
+        h: int,
+    ) -> None:
         number_masks = sv.xyxy_to_mask(
             boxes=number_detections.xyxy, resolution_wh=(w, h),
         )
-
         ios = sv.mask_iou_batch(
             masks_true=player_masks,
             masks_detection=number_masks,
             overlap_metric=sv.OverlapMetric.IOS,
-        )  # (n_players, n_numbers)
-
+        )
         tids: List[int] = []
         values: List[Optional[str]] = []
         for num_idx in range(ios.shape[1]):
@@ -112,13 +124,63 @@ class JerseyNumberOCR:
                 continue
             tids.append(int(entities[player_idx].track_id))
             values.append(str(number))
+        self._apply_votes(tids, values)
 
-        if tids:
-            self._votes.update(tracker_ids=tids, values=values)
-            for tid in tids:
-                v = self._votes.get_validated(tid)
-                if v is not None:
-                    self._locked[tid] = int(v)
+    def _update_via_bboxes(
+        self,
+        frame_bgr: np.ndarray,
+        number_detections: sv.Detections,
+        entities: List[TrackedEntity],
+    ) -> None:
+        """Empareja cajas ``number`` con bbox de jugador por IoU (modo botsort)."""
+        h, w = frame_bgr.shape[:2]
+        tids: List[int] = []
+        values: List[Optional[str]] = []
+        for num_idx in range(len(number_detections)):
+            num_box = number_detections.xyxy[num_idx]
+            best_iou = 0.0
+            best_player = -1
+            for player_idx, entity in enumerate(entities):
+                iou = self._bbox_iou(num_box, entity.bbox_xyxy)
+                if iou > best_iou:
+                    best_iou = iou
+                    best_player = player_idx
+            if best_player < 0 or best_iou < self._s.number_match_iou:
+                continue
+            crop = self._crop_number(frame_bgr, num_box, w, h)
+            if crop is None:
+                continue
+            number = self._read(crop)
+            if number is None:
+                continue
+            tids.append(int(entities[best_player].track_id))
+            values.append(str(number))
+        self._apply_votes(tids, values)
+
+    def _apply_votes(self, tids: List[int], values: List[Optional[str]]) -> None:
+        if not tids:
+            return
+        self._votes.update(tracker_ids=tids, values=values)
+        for tid in tids:
+            v = self._votes.get_validated(tid)
+            if v is not None:
+                self._locked[tid] = int(v)
+
+    @staticmethod
+    def _bbox_iou(a: np.ndarray, b: np.ndarray) -> float:
+        ix1 = max(float(a[0]), float(b[0]))
+        iy1 = max(float(a[1]), float(b[1]))
+        ix2 = min(float(a[2]), float(b[2]))
+        iy2 = min(float(a[3]), float(b[3]))
+        iw = max(0.0, ix2 - ix1)
+        ih = max(0.0, iy2 - iy1)
+        inter = iw * ih
+        if inter <= 0:
+            return 0.0
+        area_a = max(0.0, (a[2] - a[0]) * (a[3] - a[1]))
+        area_b = max(0.0, (b[2] - b[0]) * (b[3] - b[1]))
+        union = area_a + area_b - inter
+        return inter / union if union > 0 else 0.0
 
     # ------------------------------------------------------------------
     def locked_numbers(self) -> Dict[int, int]:
