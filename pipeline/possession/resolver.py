@@ -4,8 +4,9 @@ Diseño (ver ``PossessionSettings`` para el porqué de cada parámetro):
 
   1. **Candidato por frame** combinando dos señales en espacio imagen:
        - *Primaria*: la detección ``player-in-possession`` (clase 5) de
-         RF-DETR, asociada al track con mayor IoU sobre su bbox. Es un
-         detector de posesión ya entrenado, así que manda cuando dispara.
+         RF-DETR por encima de ``class5_score_threshold``, asociada al track
+         con mayor IoU (``class5_iou``) y, si ``class5_requires_ball``, con el
+         balón cerca del jugador. Manda cuando pasa todos los filtros.
        - *Secundaria*: distancia del centro del balón al bbox del jugador,
          normalizada por la altura del bbox (invariante a la perspectiva).
          Cubre los frames en que la clase 5 no aparece.
@@ -59,13 +60,16 @@ class PossessionResolver:
         ball_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
         in_possession_detections: Optional[sv.Detections] = None,
+        hoop_detections: Optional[sv.Detections] = None,
     ) -> Optional[int]:
         """Devuelve el ``track_id`` poseedor de este frame (o ``None``)."""
         if not self._s.enabled or not entities:
             self._register_none()
             return self._possessor
 
-        candidate = self._frame_candidate(ball_detections, entities, in_possession_detections)
+        candidate = self._frame_candidate(
+            ball_detections, entities, in_possession_detections, hoop_detections,
+        )
         self._advance_state(candidate)
         if self._possessor is not None:
             self._frames_by_track[self._possessor] = (
@@ -83,17 +87,78 @@ class PossessionResolver:
         ball_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
         in_possession_detections: Optional[sv.Detections],
+        hoop_detections: Optional[sv.Detections] = None,
     ) -> Optional[int]:
         # (1) Señal primaria: clase 5 asociada por IoU al track.
-        class5 = self._class5_candidate(in_possession_detections, entities)
+        class5 = self._class5_candidate(
+            ball_detections, in_possession_detections, entities,
+        )
         if class5 is not None:
             return class5
 
         # (2) Señal secundaria: proximidad balón→jugador en imagen.
-        return self._proximity_candidate(ball_detections, entities)
+        return self._proximity_candidate(ball_detections, entities, hoop_detections)
+
+    def _ball_near_rim(
+        self,
+        ball_c: np.ndarray,
+        hoop_detections: Optional[sv.Detections],
+    ) -> bool:
+        if (
+            not self._s.suppress_proximity_near_rim
+            or hoop_detections is None
+            or len(hoop_detections) == 0
+        ):
+            return False
+        for box in hoop_detections.xyxy:
+            x1, y1, x2, y2 = map(float, box)
+            rcx = (x1 + x2) / 2.0
+            rcy = (y1 + y2) / 2.0
+            rh = max(y2 - y1, 1.0)
+            dist = float(np.hypot(ball_c[0] - rcx, ball_c[1] - rcy))
+            if dist <= self._s.rim_suppress_factor * rh:
+                return True
+        return False
+
+    def _ball_center(
+        self, ball_detections: Optional[sv.Detections],
+    ) -> Optional[np.ndarray]:
+        if ball_detections is None or len(ball_detections) == 0:
+            return None
+        bx = ball_detections.xyxy[0]
+        return np.array(
+            [(bx[0] + bx[2]) / 2.0, (bx[1] + bx[3]) / 2.0], dtype=np.float32,
+        )
+
+    def _ball_edge_distance_heights(
+        self, ball_c: np.ndarray, bbox_xyxy: np.ndarray,
+    ) -> float:
+        x1, y1, x2, y2 = map(float, bbox_xyxy)
+        height = max(y2 - y1, 1.0)
+        m = self._s.bbox_margin_px
+        dx = max(x1 - m - ball_c[0], 0.0, ball_c[0] - (x2 + m))
+        dy = max(y1 - m - ball_c[1], 0.0, ball_c[1] - (y2 + m))
+        return float(np.hypot(dx, dy)) / height
+
+    def _ball_near_entity(
+        self,
+        ball_detections: Optional[sv.Detections],
+        entity: TrackedEntity,
+        max_heights: Optional[float] = None,
+    ) -> bool:
+        ball_c = self._ball_center(ball_detections)
+        if ball_c is None:
+            return False
+        limit = (
+            self._s.max_ball_distance_heights
+            if max_heights is None
+            else max_heights
+        )
+        return self._ball_edge_distance_heights(ball_c, entity.bbox_xyxy) <= limit
 
     def _class5_candidate(
         self,
+        ball_detections: Optional[sv.Detections],
         in_possession_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
     ) -> Optional[int]:
@@ -105,34 +170,35 @@ class PossessionResolver:
         if iou.size == 0 or float(iou.max()) < self._s.class5_iou:
             return None
         best_player_idx, _ = np.unravel_index(int(np.argmax(iou)), iou.shape)
-        return int(entities[best_player_idx].track_id)
+        entity = entities[best_player_idx]
+        if self._s.class5_requires_ball and not self._ball_near_entity(
+            ball_detections, entity, self._s.class5_max_ball_distance_heights,
+        ):
+            return None
+        return int(entity.track_id)
 
     def _proximity_candidate(
         self,
         ball_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
+        hoop_detections: Optional[sv.Detections] = None,
     ) -> Optional[int]:
-        if ball_detections is None or len(ball_detections) == 0:
+        ball_c = self._ball_center(ball_detections)
+        if ball_c is None:
             return None
-        bx = ball_detections.xyxy[0]
-        ball_c = np.array([(bx[0] + bx[2]) / 2.0, (bx[1] + bx[3]) / 2.0], dtype=np.float32)
+        if self._ball_near_rim(ball_c, hoop_detections):
+            return None
 
         best_tid: Optional[int] = None
         best_score = np.inf
         for e in entities:
-            x1, y1, x2, y2 = e.bbox_xyxy
-            height = max(float(y2 - y1), 1.0)
-            # Expandir ligeramente el bbox para absorber imprecisión de SAM en bordes.
-            m = self._s.bbox_margin_px
-            dx = max(x1 - m - ball_c[0], 0.0, ball_c[0] - (x2 + m))
-            dy = max(y1 - m - ball_c[1], 0.0, ball_c[1] - (y2 + m))
-            edge_norm = float(np.hypot(dx, dy)) / height
+            edge_norm = self._ball_edge_distance_heights(ball_c, e.bbox_xyxy)
             if edge_norm > self._s.max_ball_distance_heights:
                 continue
-            # Desempate cuando varios jugadores contienen el balón (edge=0):
-            # el más cercano por centro gana, con peso ínfimo.
+            x1, y1, x2, y2 = e.bbox_xyxy
             cx = (x1 + x2) / 2.0
             cy = (y1 + y2) / 2.0
+            height = max(float(y2 - y1), 1.0)
             center_norm = float(np.hypot(ball_c[0] - cx, ball_c[1] - cy)) / height
             score = edge_norm + 1e-3 * center_norm
             if score < best_score:
