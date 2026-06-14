@@ -52,6 +52,7 @@ from pipeline.teams.team_classifier import TeamClassifier
 from pipeline.possession.resolver import PossessionResolver
 from pipeline.profiling import StageTimer
 from pipeline.scoring.shot_tracker import ShotTracker
+from pipeline.segmentation import SegmentController
 from pipeline.tracking.ball_tracker import BallTracker
 from pipeline.tracking.foot_point_mask import MaskFootPoint
 from pipeline.tracking.sam_tracker import SAMTracker
@@ -83,6 +84,7 @@ class Pipeline:
         self.ball_tracker = BallTracker(self.settings.ball_tracking)
         self.possession = PossessionResolver(self.settings.possession)
         self.shot_tracker = ShotTracker(self.settings.score)
+        self.segmenter = SegmentController(self.settings.segmentation)
 
         self.court_kp = CourtKeypointDetector(self.settings.court)
         self.kp_stabilizer = KeypointStabilizer(self.settings.court)
@@ -133,6 +135,7 @@ class Pipeline:
         self.sam.prepare_video(input_path)
         self.possession.reset()
         self.shot_tracker.reset()
+        self.segmenter.reset()
         # PnP necesita el centro de imagen (punto principal) para construir K.
         if isinstance(self.homography, PnPCameraEstimator):
             self.homography.set_image_size(io.width, io.height)
@@ -145,6 +148,17 @@ class Pipeline:
                     ok, frame = io.cap.read()
                 if not ok:
                     break
+                # Segmentación: ¿toca reiniciar SAM en este límite? (corte de
+                # cámara / cambio de posesión de equipo / tope de longitud).
+                if self.settings.segmentation.enabled:
+                    reason = self.segmenter.pre_frame(frame, frame_index)
+                    if reason is not None:
+                        self.sam.prepare_video(input_path)
+                        import torch
+                        torch.cuda.empty_cache()
+                        print(f"  [SEG] frame {frame_index}: reinicio SAM "
+                              f"({reason}, segmento {self.segmenter.segment_index})",
+                              flush=True)
                 ctx = FrameContext(
                     frame_index=frame_index,
                     frame_bgr=frame,
@@ -152,6 +166,12 @@ class Pipeline:
                     frame_width=io.width,
                 )
                 self._process_frame(ctx)
+                if self.settings.segmentation.enabled:
+                    pteam = (
+                        self.teams.color_name(ctx.possessor_track_id)
+                        if ctx.possessor_track_id is not None else None
+                    )
+                    self.segmenter.post_frame(pteam)
                 with self.timer.stage("escritura"):
                     if out_main is not None and ctx.overlay_frame is not None:
                         out_main.write(ctx.overlay_frame)

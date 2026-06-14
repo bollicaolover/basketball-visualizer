@@ -325,6 +325,32 @@ class RenderSettings:
 
 
 # ---------------------------------------------------------------------------
+# Segmentación por posesión: trocea el vídeo en segmentos cortos reiniciando la
+# sesión SAM en límites fiables. Mantiene el tracking en el régimen "vídeo
+# corto" (sin pérdidas acumuladas) y acota la memoria de SAM para cualquier
+# duración, sin depender de la posesión a nivel de jugador (poco fiable).
+# ---------------------------------------------------------------------------
+@dataclass
+class SegmentationSettings:
+    enabled: bool = True
+    # Posesión a nivel EQUIPO: frames seguidos que el equipo contrario debe
+    # mantener el balón bajo umbral para declarar cambio de posesión (histéresis
+    # fuerte que filtra desvíos, robos fallidos y rebotes sueltos). ~20 ≈ 0.7s.
+    team_switch_frames: int = 20
+    # Longitud mínima de segmento: un cambio de posesión no reinicia SAM si el
+    # segmento actual es más corto que esto (coalesce ráfagas de posesión
+    # disputada). No aplica a los cortes de cámara, que siempre reinician. ~45 ≈ 1.5s.
+    min_segment_frames: int = 45
+    # Corte de cámara: correlación de histograma entre frames consecutivos por
+    # debajo de esto = corte (tras un corte el tracking de SAM es basura).
+    scene_cut_correlation: float = 0.60
+    # Tope de frames por segmento (red de seguridad). Alineado al reloj de
+    # posesión (24 s ≈ 720 frames a 30 fps); por debajo del umbral de OOM de SAM
+    # con ~10 objetos. Acota la memoria aunque no haya corte ni cambio de equipo.
+    max_segment_frames: int = 600
+
+
+# ---------------------------------------------------------------------------
 # Settings global
 # ---------------------------------------------------------------------------
 @dataclass
@@ -338,6 +364,7 @@ class Settings:
     teams: TeamSettings = field(default_factory=TeamSettings)
     identity: IdentitySettings = field(default_factory=IdentitySettings)
     sam: SAMSettings = field(default_factory=SAMSettings)
+    segmentation: SegmentationSettings = field(default_factory=SegmentationSettings)
     render: RenderSettings = field(default_factory=RenderSettings)
 
     write_overlay_video: bool = True
