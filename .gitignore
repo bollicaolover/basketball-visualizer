@@ -24,3 +24,6 @@ __pycache__/
 
 # Logs de ejecución
 *.log
+
+# Documentos de referencia externos
+*.pdf
