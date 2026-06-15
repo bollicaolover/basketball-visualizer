@@ -49,14 +49,17 @@ from pipeline.identity.number_ocr import JerseyNumberOCR
 import pipeline.identity.roster as roster_mod
 from pipeline.identity.roster import player_name
 from pipeline.io.video import open_video_writer
+from pipeline.strategy import build_ball_tracker, build_foot_point, build_sam_tracker
 from pipeline.teams.team_classifier import TeamClassifier
 from pipeline.possession.resolver import PossessionResolver
 from pipeline.profiling import StageTimer
 from pipeline.scoring.shot_tracker import ShotTracker
+from pipeline.scoring.release_detector import ReleaseDetector
+from pipeline.pose.pose_estimator import PoseEstimator
 from pipeline.metadata_writer import MetadataWriter
-from pipeline.tracking.ball_tracker import BallTracker
-from pipeline.tracking.foot_point_mask import MaskFootPoint
-from pipeline.tracking.sam_tracker import SAMTracker
+from pipeline.tracking.dedup import deduplicate_player_detections
+from pipeline.tracking.player_tracker import PlayerTracker
+from pipeline.tracking.tracker import tracked_entities_from_detections
 from pipeline.tracking.types import TrackedEntity
 
 
@@ -86,12 +89,33 @@ def _metadata_output_path(output_path: str) -> str:
 class Pipeline:
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or Settings.default()
+        mode = self.settings.tracker_mode
+        if mode not in ("sam", "botsort"):
+            raise ValueError(f"tracker_mode inválido: {mode!r} (usa 'sam' o 'botsort')")
 
         self.detector = RFDETRDetector(self.settings.detection)
-        self.sam = SAMTracker(self.settings.sam, yolo_prompter=self.detector)
-        self.ball_tracker = BallTracker(self.settings.ball_tracking)
+        self._sam_tracker = build_sam_tracker(self.settings, yolo_prompter=self.detector)
+        if mode == "sam" and self._sam_tracker is None:
+            raise RuntimeError(
+                "tracker_mode='sam' pero SAM 3 no se pudo cargar. "
+                "Usa --tracker botsort o revisa models/sam3."
+            )
+        self.player_tracker = (
+            PlayerTracker(self.settings.player_tracking)
+            if mode == "botsort"
+            else None
+        )
+        print(f"[INFO] tracking: {mode}", flush=True)
+        self.ball_tracker = build_ball_tracker(self.settings)
+        print(f"[INFO] ball tracker: {self.settings.ball_tracking.method}", flush=True)
         self.possession = PossessionResolver(self.settings.possession)
         self.shot_tracker = ShotTracker(self.settings.score)
+        # Detección de suelta por pose (opt-in): pose del poseedor + separación
+        # mano→balón hacia arriba. Refuerza el trigger del tiro y siembra la 3D.
+        self.pose_estimator = PoseEstimator(self.settings.pose)
+        self.release_detector = ReleaseDetector(self.settings.release)
+        if self.settings.pose.enabled:
+            print("[INFO] pose/release: activado", flush=True)
 
         self.court_kp = CourtKeypointDetector(self.settings.court)
         self.kp_stabilizer = KeypointStabilizer(self.settings.court)
@@ -108,7 +132,7 @@ class Pipeline:
             if self.settings.identity.enabled else None
         )
 
-        self.foot_point = MaskFootPoint()
+        self.foot_point = build_foot_point(self.settings)
         self.player_smoother = WorldTrackSmoother(self.settings.smoothing)
 
         rp = self.settings.identity.roster_path
@@ -146,10 +170,12 @@ class Pipeline:
             if self.settings.write_metadata else None
         )
 
-        # SAM en modo streaming: reinicia la sesión para este vídeo.
-        self.sam.prepare_video(input_path)
+        # SAM necesita el vídeo entero; BoT-SORT es streaming frame a frame.
+        if self._sam_tracker is not None:
+            self._sam_tracker.prepare_video(input_path)
         self.possession.reset()
         self.shot_tracker.reset()
+        self.release_detector.reset()
         # PnP necesita el centro de imagen (punto principal) para construir K.
         if isinstance(self.homography, PnPCameraEstimator):
             self.homography.set_image_size(io.width, io.height)
@@ -196,6 +222,36 @@ class Pipeline:
         self._print_possession_summary()
         self._print_score_summary()
         self._print_timing_summary(frame_index)
+
+        if self.settings.shot3d.enabled and self.settings.write_metadata:
+            self._run_shot3d(input_path, output_path)
+
+    def _run_shot3d(self, input_path: str, output_path: str) -> None:
+        from pathlib import Path
+
+        from pipeline.shot3d.reconstruct import Shot3DError, run_shot3d, shot3d_output_paths
+
+        video_out, json_out = shot3d_output_paths(output_path)
+        if not self.settings.shot3d.write_video:
+            video_out = None
+        if not self.settings.shot3d.write_json:
+            json_out = None
+        meta_path = Path(_metadata_output_path(output_path))
+        print("[STAGE] shot3d", flush=True)
+        with self.timer.stage("shot3d"):
+            try:
+                run_shot3d(
+                    input_video=Path(input_path),
+                    metadata_path=meta_path,
+                    video_out=video_out,
+                    json_out=json_out,
+                    min_segment=self.settings.shot3d.min_segment,
+                    pose_release=self.settings.shot3d.pose_release,
+                    extend_to_release=self.settings.shot3d.extend_to_release,
+                    device=self.settings.detection.device,
+                )
+            except Shot3DError as exc:
+                print(f"[WARN] reconstrucción 3D omitida: {exc}", flush=True)
 
     def _print_possession_summary(self) -> None:
         """Reparto de posesión: frames por equipo (y por track) en el vídeo."""
@@ -352,9 +408,21 @@ class Pipeline:
             ctx.homography = est.H
             ctx.homography_confidence = est.confidence
 
-        # 3. Tracking SAM (prompt-once con RF-DETR)
+        # 3. Tracking de jugadores (SAM 3 o BoT-SORT)
         with self.timer.stage("tracking"):
-            ctx.tracked_entities = self.sam.update(ctx.frame_bgr, ctx.frame_index)
+            if self._sam_tracker is not None:
+                ctx.tracked_entities = self._sam_tracker.update(
+                    ctx.frame_bgr, ctx.frame_index,
+                )
+            else:
+                pt = self.settings.player_tracking
+                tracked = self.player_tracker.update(ctx.player_detections, ctx.frame_bgr)
+                tracked = deduplicate_player_detections(
+                    tracked,
+                    min_iou=pt.dedup_min_iou,
+                    enabled=pt.dedup_enabled,
+                )
+                ctx.tracked_entities = tracked_entities_from_detections(tracked)
 
         # 4. Equipos (voto por track)
         with self.timer.stage("equipos"):
@@ -375,9 +443,16 @@ class Pipeline:
 
             # 6.5. Posesión: qué track tiene el balón (clase-5 + proximidad en imagen).
             in_possession = self._subset(raw, {IN_POSSESSION_CLASS})
-            ctx.possessor_track_id = self.possession.update(
-                ctx.ball_detections, ctx.tracked_entities, in_possession
+            in_possession = self._filter_confidence(
+                in_possession, self.settings.possession.class5_score_threshold,
             )
+            ctx.possessor_track_id = self.possession.update(
+                ctx.ball_detections, ctx.tracked_entities, in_possession,
+                hoop_detections=ctx.hoop_detections,
+            )
+
+            # 6.55. Suelta por pose (opt-in): muñecas del poseedor + balón.
+            release_now = self._detect_release(ctx)
 
             # 6.6. Tiro: acierto/fallo a partir de balón + aro + `ball-in-basket`.
             # El equipo se lee del clasificador (ctx.team_by_track aún no está poblado).
@@ -396,6 +471,7 @@ class Pipeline:
                 possessor_team,
                 ctx.frame_width,
                 shot_actions,
+                release_now=release_now,
             )
             if shot is not None:
                 ctx.shot_side = shot.side
@@ -583,6 +659,32 @@ class Pipeline:
         )
 
     # ------------------------------------------------------------------
+    def _detect_release(self, ctx: FrameContext) -> bool:
+        """Suelta del tiro por pose del poseedor (opt-in). Rellena
+        ``ctx.release_event`` y devuelve True si hay suelta en este frame."""
+        if not self.settings.pose.enabled:
+            return False
+        # Centro del balón (tracker dedicado).
+        if ctx.ball_detections is None or len(ctx.ball_detections) == 0:
+            self.release_detector.update(ctx.frame_index, [], None)
+            return False
+        b = ctx.ball_detections.xyxy[0]
+        ball_xy = np.array([(b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0], dtype=np.float32)
+        # Bbox del poseedor (si lo hay).
+        possessor_box = None
+        if ctx.possessor_track_id is not None:
+            for e in ctx.tracked_entities:
+                if e.track_id == ctx.possessor_track_id:
+                    possessor_box = e.bbox_xyxy
+                    break
+        if possessor_box is None:
+            self.release_detector.update(ctx.frame_index, [], ball_xy)
+            return False
+        wrists = self.pose_estimator.wrists(ctx.frame_bgr, possessor_box).wrists()
+        event = self.release_detector.update(ctx.frame_index, wrists, ball_xy)
+        ctx.release_event = event
+        return event is not None
+
     @staticmethod
     def _subset(raw: sv.Detections, classes) -> sv.Detections:
         if raw is None or len(raw) == 0:
@@ -591,6 +693,19 @@ class Pipeline:
         if not mask.any():
             return sv.Detections.empty()
         return raw[mask]
+
+    @staticmethod
+    def _filter_confidence(
+        dets: sv.Detections, min_confidence: float,
+    ) -> sv.Detections:
+        if dets is None or len(dets) == 0:
+            return sv.Detections.empty()
+        if dets.confidence is None:
+            return dets
+        mask = dets.confidence >= min_confidence
+        if not mask.any():
+            return sv.Detections.empty()
+        return dets[mask]
 
     @staticmethod
     def _entities_from_boxes(dets: sv.Detections) -> List[TrackedEntity]:

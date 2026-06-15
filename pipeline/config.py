@@ -88,16 +88,73 @@ class DetectionSettings:
 
 
 # ---------------------------------------------------------------------------
+# Tracking de jugadores (BoT-SORT vía boxmot)
+# ---------------------------------------------------------------------------
+@dataclass
+class PlayerTrackingSettings:
+    """BoT-SORT + deduplicación IoU post-tracking."""
+
+    botsort_track_high_thresh: float = 0.5
+    botsort_track_low_thresh: float = 0.1
+    botsort_new_track_thresh: float = 0.7
+    botsort_track_buffer: int = 30
+    botsort_match_thresh: float = 0.75
+    botsort_proximity_thresh: float = 0.75
+    botsort_appearance_thresh: float = 0.25
+    botsort_cmc_method: str = "ecc"
+    botsort_frame_rate: int = 30
+    botsort_min_hits: int = 3
+    botsort_with_reid: bool = True
+    botsort_fuse_first_associate: bool = True
+    botsort_reid_weights: str = "models/reid-osnet/osnet_x0_25_sportsmot.pt"
+    botsort_device: str = "cuda:0"
+    botsort_reid_half: bool = True
+    detection_nms_iou: float = 0.350
+    dedup_enabled: bool = True
+    dedup_min_iou: float = 0.85
+
+
+# ---------------------------------------------------------------------------
 # Tracking del balón (portado del proyecto original)
 # ---------------------------------------------------------------------------
 @dataclass
 class BallTrackingSettings:
+    # Método de seguimiento del balón:
+    #   "ema"    — suavizado por media móvil exponencial (implementación original).
+    #   "kalman" — filtro de Kalman + validación de trayectoria física inspirado
+    #              en la tesis de Luca Pirotta (recta en X, parábola en Y).
+    # Por defecto "ema" para no alterar el comportamiento existente; la variante
+    # de Kalman se activa explícitamente (CLI --ball-tracker kalman) para poder
+    # compararlas.
+    method: str = "ema"
+
+    # --- Comunes / modo EMA ---
     simple: bool = False
     ema_alpha: float = 0.55
     max_jump_px: float = 180.0
     holdover_frames: int = 18
     match_distance_px: float = 120.0
     min_confidence: float = 0.25
+
+    # --- Modo Kalman (Pirotta, cap. 4) ---
+    # Escalas de las matrices de covarianza de ruido de proceso (Q) y medición (R)
+    # y de la covarianza inicial del estado (P0). Estado: [x, y, vx, vy].
+    kalman_process_noise: float = 0.1
+    kalman_measurement_noise: float = 2.0
+    kalman_initial_cov: float = 10.0
+    # Validación geométrica de la trayectoria (sección 4.2.1 de la tesis).
+    validate_trajectory: bool = True
+    # Descarte a priori de tracklets cortos (la tesis elimina los de longitud < 10).
+    min_tracklet_len: int = 10
+    # Error de ajuste máximo (MSE en píxeles) de la recta en X y la parábola en Y
+    # por encima del cual se considera que el histórico es ruido y se reinicia.
+    max_fit_residual_px: float = 25.0
+    # Cada cuántos frames se reevalúa retrospectivamente la física de la trayectoria.
+    validate_every: int = 15
+    # Si True, además del residuo se exige que la parábola en Y sea cóncava hacia
+    # abajo en coordenadas mundo (gravedad). Desactivado por defecto: durante el
+    # bote/los pases la Y no describe una parábola limpia y reiniciaría de más.
+    require_parabola: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -117,11 +174,21 @@ class PossessionSettings:
     """
 
     enabled: bool = True
+    # Confianza mínima de RF-DETR para aceptar una caja `player-in-possession`
+    # (más estricta que ``DetectionSettings.score_threshold``; reduce FP).
+    class5_score_threshold: float = 0.55
     # IoU mínimo para asociar una caja `player-in-possession` con un track.
-    class5_iou: float = 0.30
-    # Distancia balón→jugador máxima, en múltiplos de la altura del bbox del
-    # jugador (≈6.5 ft de alto). 0.6 ≈ el balón a poco menos de una cabeza.
-    max_ball_distance_heights: float = 0.6
+    class5_iou: float = 0.45
+    # Si es True, la señal clase 5 solo cuenta si el balón está cerca del
+    # jugador asociado (más estricto que la señal secundaria de proximidad).
+    class5_requires_ball: bool = True
+    class5_max_ball_distance_heights: float = 0.25
+    # Distancia balón→jugador máxima para la señal de proximidad (múltiplos de la
+    # altura del bbox). 0,35 evita falsos poseedores con el balón en el aro.
+    max_ball_distance_heights: float = 0.35
+    # No asignar posesión por proximidad si el balón está en la vecindad del aro.
+    suppress_proximity_near_rim: bool = True
+    rim_suppress_factor: float = 2.5
     # Histéresis: frames consecutivos que un nuevo candidato debe ganar para
     # arrebatar la posesión (evita parpadeo en forcejeos).
     switch_frames: int = 3
@@ -174,6 +241,61 @@ class ScoreSettings:
     # ball-in-basket sobre el aro aunque el balón esté lejos; este cruce con la
     # posición real del balón descarta esos falsos positivos.
     bib_ball_max_rim_dist: float = 2.5
+
+
+# ---------------------------------------------------------------------------
+# Pose del poseedor (YOLOv8-pose) para detectar la suelta del tiro
+# ---------------------------------------------------------------------------
+@dataclass
+class PoseSettings:
+    """Estimación de pose del jugador en posesión para localizar la suelta.
+
+    Por eficiencia, la inferencia se hace SOLO sobre el recorte del bbox del
+    poseedor (no sobre el frame completo) y solo cuando hay poseedor. El coste
+    así es despreciable frente al resto del pipeline. Desactivado por defecto
+    (opt-in): el resto del sistema no depende de la pose.
+    """
+
+    enabled: bool = False
+    # YOLOv8-pose COCO (17 keypoints). Si es un nombre de modelo de ultralytics
+    # (no una ruta existente) se descarga automáticamente a la caché.
+    model_path: str = "yolov8n-pose.pt"
+    device: str = "cuda"
+    # Confianza mínima del keypoint de muñeca para considerarlo válido.
+    min_kpt_conf: float = 0.30
+    # Margen (px) que se añade al bbox del poseedor antes de recortar.
+    crop_margin_px: int = 20
+    # Inferir solo cada N frames (1 = cada frame). El balón se mueve rápido en la
+    # suelta, así que 1 es lo recomendado cuando está activo.
+    infer_every: int = 1
+    # Índices COCO de las muñecas (no cambiar salvo otro modelo de pose).
+    left_wrist_idx: int = 9
+    right_wrist_idx: int = 10
+
+
+# ---------------------------------------------------------------------------
+# Detección de la suelta del balón (separación mano→balón hacia arriba)
+# ---------------------------------------------------------------------------
+@dataclass
+class ReleaseSettings:
+    """Dispara un evento de "suelta" cuando el balón se separa de la muñeca del
+    poseedor moviéndose hacia arriba. Estado puro (sin modelo): se alimenta con
+    la muñeca (de :class:`PoseSettings`) y el centro del balón por frame.
+    """
+
+    enabled: bool = False
+    # El balón se considera "en la mano" si está a <= held_px de la muñeca.
+    held_px: float = 70.0
+    # Frames hacia atrás en los que debe haberse visto el balón "en la mano".
+    held_lookback: int = 8
+    # Distancia mano→balón (px) por encima de la cual se considera "separado".
+    separation_px: float = 45.0
+    # Frames consecutivos que deben cumplir separación creciente + balón subiendo.
+    confirm_frames: int = 3
+    # Subida mínima del balón (px en Y-imagen, hacia arriba) en la ventana.
+    min_upward_px: float = 18.0
+    # Cooldown (frames) tras una suelta para no redispararla.
+    cooldown_frames: int = 25
 
 
 # ---------------------------------------------------------------------------
@@ -265,8 +387,10 @@ class IdentitySettings:
     crop_resolution: int = 224
     # Fichero JSON con rosters y colores (vacío = sin lookup de nombres).
     roster_path: str = ""
-    # IoS mínimo para emparejar una caja `number` con la máscara de un jugador.
+    # IoS mínimo para emparejar una caja `number` con la máscara de un jugador (modo sam).
     number_match_ios: float = 0.9
+    # IoU mínimo caja `number` ↔ bbox jugador (modo botsort, sin máscaras).
+    number_match_iou: float = 0.15
     # Voto temporal: lecturas consecutivas para fijar el número por track.
     votes_to_lock: int = 3
     # Puente de bootstrap: si no hay SmolVLM2 entrenado, usar PARSeq existente.
@@ -330,20 +454,39 @@ class RenderSettings:
 
 
 # ---------------------------------------------------------------------------
+# Reconstrucción 3D del tiro (post-proceso, requiere metadata)
+# ---------------------------------------------------------------------------
+@dataclass
+class Shot3DSettings:
+    enabled: bool = False
+    pose_release: bool = True
+    extend_to_release: bool = True
+    min_segment: int = 8
+    write_video: bool = True
+    write_json: bool = True
+
+
+# ---------------------------------------------------------------------------
 # Settings global
 # ---------------------------------------------------------------------------
 @dataclass
 class Settings:
+    # ``"sam"`` — SAM 3 (máscaras, OCR por IoS). ``"botsort"`` — BoT-SORT (bbox).
+    tracker_mode: str = "sam"
     detection: DetectionSettings = field(default_factory=DetectionSettings)
+    player_tracking: PlayerTrackingSettings = field(default_factory=PlayerTrackingSettings)
     ball_tracking: BallTrackingSettings = field(default_factory=BallTrackingSettings)
     possession: PossessionSettings = field(default_factory=PossessionSettings)
     score: ScoreSettings = field(default_factory=ScoreSettings)
+    pose: PoseSettings = field(default_factory=PoseSettings)
+    release: ReleaseSettings = field(default_factory=ReleaseSettings)
     court: CourtSettings = field(default_factory=CourtSettings)
     smoothing: SmoothingSettings = field(default_factory=SmoothingSettings)
     teams: TeamSettings = field(default_factory=TeamSettings)
     identity: IdentitySettings = field(default_factory=IdentitySettings)
     sam: SAMSettings = field(default_factory=SAMSettings)
     render: RenderSettings = field(default_factory=RenderSettings)
+    shot3d: Shot3DSettings = field(default_factory=Shot3DSettings)
 
     write_overlay_video: bool = True
     write_map_video: bool = True

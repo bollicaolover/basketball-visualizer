@@ -32,6 +32,30 @@ def main() -> None:
         "--team-names", default=None,
         help="Nombres de los dos equipos separados por coma, p.ej. 'Lakers,Warriors'.",
     )
+    ap.add_argument(
+        "--tracker",
+        choices=("sam", "botsort"),
+        default="sam",
+        help="backend de tracking: sam (máscaras) o botsort (BoT-SORT)",
+    )
+    ap.add_argument(
+        "--ball-tracker",
+        choices=("ema", "kalman"),
+        default=None,
+        help="seguimiento del balón: ema (suavizado original) o kalman (método Pirotta)",
+    )
+    ap.add_argument(
+        "--shot3d", action="store_true",
+        help="reconstrucción 3D del tiro tras el análisis (requiere --metadata)",
+    )
+    ap.add_argument(
+        "--no-shot3d", action="store_true",
+        help="desactivar reconstrucción 3D aunque esté --metadata",
+    )
+    ap.add_argument(
+        "--no-shot3d-pose", action="store_true",
+        help="sin detección de suelta por pose en la 3D",
+    )
     # Ignorado en esta implementación (sin partición multi-GPU); se acepta por
     # compatibilidad con el runner del backend que lo pasa siempre.
     ap.add_argument("--mem-fraction", type=float, default=1.0, help=argparse.SUPPRESS)
@@ -57,6 +81,15 @@ def main() -> None:
             settings.metadata_team_names = (parts[0], parts[1])
         else:
             ap.error("--team-names requiere exactamente dos nombres separados por coma")
+    settings.tracker_mode = args.tracker
+    if args.ball_tracker is not None:
+        settings.ball_tracking.method = args.ball_tracker
+    if args.shot3d:
+        settings.shot3d.enabled = True
+    if args.no_shot3d:
+        settings.shot3d.enabled = False
+    if args.no_shot3d_pose:
+        settings.shot3d.pose_release = False
 
     Pipeline(settings).process_video(args.input, args.output)
 
