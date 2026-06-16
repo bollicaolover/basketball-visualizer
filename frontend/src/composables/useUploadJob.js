@@ -18,10 +18,11 @@ const STATUS_LABELS = {
  * @param {Ref<string>}   deps.gpusParam  "auto" o CSV de índices.
  * @param {Ref<string>}   deps.team1
  * @param {Ref<string>}   deps.team2
+ * @param {Ref<string>}   deps.trackerMode  "sam" | "botsort".
  * @param {(jobId, label) => void} deps.onRecent  registra el análisis.
  * @param {(jobId) => void}        deps.onDone    se llama al completarse.
  */
-export function useUploadJob({ gpusParam, team1, team2, onRecent, onDone }) {
+export function useUploadJob({ gpusParam, team1, team2, trackerMode, onRecent, onDone }) {
   const selectedFile = ref(null)
   const rosterFile   = ref(null)   // roster JSON opcional (nombres + colores)
   const isDragging   = ref(false)
@@ -46,6 +47,7 @@ export function useUploadJob({ gpusParam, team1, team2, onRecent, onDone }) {
     memFraction: 1.0,
     team1:       team1?.value?.trim() ?? '',
     team2:       team2?.value?.trim() ?? '',
+    tracker:     trackerMode?.value ?? 'sam',
   })
 
   function resetJobState() {

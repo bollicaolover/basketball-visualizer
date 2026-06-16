@@ -73,6 +73,31 @@
         <button v-if="upload.rosterFile.value" class="roster-clear" type="button" title="Quitar roster" @click="upload.clearRoster">✕</button>
       </div>
 
+      <!-- Tracking backend -->
+      <div class="tracker-config">
+        <span class="tracker-label">SEGUIMIENTO</span>
+        <div class="tracker-options">
+          <button
+            type="button"
+            class="tracker-opt"
+            :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'sam' }"
+            @click="tracker.setTrackerMode('sam')"
+          >
+            SAM 3
+            <span class="tracker-opt-sub">máscaras · dorsales</span>
+          </button>
+          <button
+            type="button"
+            class="tracker-opt"
+            :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'botsort' }"
+            @click="tracker.setTrackerMode('botsort')"
+          >
+            BoT-SORT
+            <span class="tracker-opt-sub">rápido · bbox</span>
+          </button>
+        </div>
+      </div>
+
       <!-- GPU configuration -->
       <div v-if="gpus.availableGpus.value.length" class="gpu-config">
         <button class="gpu-toggle" type="button" @click="gpus.showGpuConfig.value = !gpus.showGpuConfig.value">
@@ -201,6 +226,7 @@ import { useGpus } from '../composables/useGpus.js'
 import { useTestVideos, prettifyTestVideo } from '../composables/useTestVideos.js'
 import { useRecentAnalyses } from '../composables/useRecentAnalyses.js'
 import { useUploadJob } from '../composables/useUploadJob.js'
+import { useTrackerMode } from '../composables/useTrackerMode.js'
 import { formatSize } from '../utils/format.js'
 import { STORAGE_KEYS } from '../config/index.js'
 
@@ -221,10 +247,12 @@ function toggleCollapse() {
 
 // ── Composables de estado ───────────────────────────────────────────────────
 const gpus       = useGpus()
+const tracker    = useTrackerMode()
 const testVideos = useTestVideos()
 const recent     = useRecentAnalyses()
 const upload     = useUploadJob({
   gpusParam: gpus.gpusParam,
+  trackerMode: tracker.trackerMode,
   onRecent: recent.add,
   onDone: (jobId) => emit('open-job', jobId),
 })
@@ -415,6 +443,59 @@ onMounted(() => {
   font-size: 11px;
 }
 .roster-clear:hover { background: var(--c-red); color: var(--c-white); border-color: var(--c-red); }
+
+/* ── Tracker selector ── */
+.tracker-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.tracker-label {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.tracker-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+.tracker-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.45rem 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.tracker-opt:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+.tracker-opt--active {
+  border-color: var(--accent-orange);
+  background: rgba(var(--c-orange-rgb), 0.08);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px rgba(var(--c-orange-rgb), 0.25);
+}
+.tracker-opt-sub {
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+.tracker-opt--active .tracker-opt-sub { color: var(--text-secondary); }
 
 /* ── Upload button ── */
 .upload-btn {
