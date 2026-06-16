@@ -13,7 +13,7 @@ La combinación es natural: CRISP-DM define *qué* hacer y en qué orden; Kanban
 
 ## 2. Tablero Kanban con fases CRISP-DM
 
-El tablero se implementó como [GitHub Projects](https://github.com/bollicaolover/tfg-junio/issues) con una columna por fase CRISP-DM. Cada tarjeta corresponde a un módulo entregable, vinculado a un commit concreto del repositorio.
+El tablero se implementó como [GitHub Projects](https://github.com/bollicaolover/basketball-visualizer/issues) con una columna por fase CRISP-DM. Cada tarjeta corresponde a un módulo entregable, vinculado a un commit concreto del repositorio.
 
 ### Columnas y tarjetas completadas
 
