@@ -24,11 +24,13 @@ DEFAULT_SRC = Path("/home/gdfraile/tfg/tfg-baloncesto-tacticas")
 # (origen relativo al src, destino relativo a tfg-junio/, ¿es directorio?)
 ITEMS = [
     ("models/artifacts/checkpoint_best_ema.pth", "models/detection/checkpoint_best_ema.pth", False),
+    ("data/raw/basketball-player-detection", "data/raw/basketball-player-detection", True),
     ("models/artifacts/court-keypoints/best.pt", "models/court-keypoints/best.pt", False),
     ("models/artifacts/sam3", "models/sam3", True),
     # Puente de bootstrap opcional para el OCR (hasta entrenar el SmolVLM2):
     ("models/artifacts/parseq-nba/parseq_nba_v2.ckpt", "models/parseq-nba/parseq_nba_v2.ckpt", False),
     ("models/artifacts/legibility/legibility_soccernet.pth", "models/legibility/legibility_soccernet.pth", False),
+    ("models/artifacts/reid-osnet/osnet_x0_25_sportsmot.pt", "models/reid-osnet/osnet_x0_25_sportsmot.pt", False),
 ]
 
 
