@@ -56,6 +56,10 @@ def main() -> None:
         "--no-shot3d-pose", action="store_true",
         help="sin detección de suelta por pose en la 3D",
     )
+    ap.add_argument(
+        "--tactics", action="store_true",
+        help="reconocer pantallas (screens) tras el análisis (requiere --metadata)",
+    )
     # Ignorado en esta implementación (sin partición multi-GPU); se acepta por
     # compatibilidad con el runner del backend que lo pasa siempre.
     ap.add_argument("--mem-fraction", type=float, default=1.0, help=argparse.SUPPRESS)
@@ -90,6 +94,8 @@ def main() -> None:
         settings.shot3d.enabled = False
     if args.no_shot3d_pose:
         settings.shot3d.pose_release = False
+    if args.tactics:
+        settings.tactics.enabled = True
 
     Pipeline(settings).process_video(args.input, args.output)
 
