@@ -183,6 +183,11 @@ class PossessionSettings:
     # jugador asociado (más estricto que la señal secundaria de proximidad).
     class5_requires_ball: bool = True
     class5_max_ball_distance_heights: float = 0.25
+    # P2: si el balón no tiene detección real este frame (ausente o solo
+    # extrapolado por Kalman), la señal clase 5 vale por sí sola, sin exigir el
+    # balón cerca. Cubre balón recortado/fuera de cuadro, donde el detector
+    # `player-in-possession` es justo la señal que no necesita la caja del balón.
+    class5_standalone_when_ball_missing: bool = True
     # Distancia balón→jugador máxima para la señal de proximidad (múltiplos de la
     # altura del bbox). 0,35 evita falsos poseedores con el balón en el aro.
     max_ball_distance_heights: float = 0.35

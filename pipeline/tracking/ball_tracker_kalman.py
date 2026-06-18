@@ -69,6 +69,10 @@ class KalmanBallTracker:
         self._box: Optional[np.ndarray] = None
         self._confidence: float = 0.0
         self._frames_missing: int = 0
+        # ``True`` cuando la caja devuelta este frame es una extrapolación de
+        # Kalman (oclusión), no una detección real. Lo consume el resolutor de
+        # posesión para no asignar poseedores desde una caja "alucinada" (P1).
+        self._predicted: bool = False
 
         # Estado del filtro de Kalman: x = [x, y, vx, vy]^T y su covarianza P.
         self.x_state: Optional[np.ndarray] = None
@@ -189,8 +193,19 @@ class KalmanBallTracker:
     # ------------------------------------------------------------------
     # Bucle principal
     # ------------------------------------------------------------------
+    def last_predicted(self) -> bool:
+        """``True`` si la caja del último ``update`` fue extrapolada (sin detección)."""
+        return self._predicted
+
+    def last_velocity(self) -> Optional[np.ndarray]:
+        """Velocidad estimada del balón (px/frame) o ``None`` si no hay estado."""
+        if self.x_state is None:
+            return None
+        return np.array([self.x_state[2], self.x_state[3]], dtype=np.float32)
+
     def update(self, detections: sv.Detections) -> sv.Detections:
         self._frame_count += 1
+        self._predicted = False
 
         predicted_center: Optional[np.ndarray] = None
         if self.x_state is not None:
@@ -217,6 +232,7 @@ class KalmanBallTracker:
                 [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
                 dtype=np.float32,
             )
+            self._predicted = True
             return self._as_detections()
 
         # --- Candidato encontrado: corrección del filtro ---
