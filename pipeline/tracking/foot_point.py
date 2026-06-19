@@ -5,7 +5,7 @@ Existen dos implementaciones:
 
 * :class:`BBoxFootPoint` — centro horizontal + borde inferior del bbox.
   Es la lógica histórica (anteriormente ``Pipeline._feet_from_boxes``) y se
-  usa en modo ``classic``.
+  usa en modo ``botsort``.
 * :class:`MaskFootPoint` (en :mod:`pipeline.tracking.foot_point_mask`) —
   mediana de los píxeles inferiores de la máscara sobre la banda central.
   Pendiente de la integración de SAM 3.

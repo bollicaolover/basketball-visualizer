@@ -1,10 +1,8 @@
 """Interfaz de tracking + adaptador desde ``sv.Detections``.
 
-En esta iteración el orquestador sigue invocando :class:`YOLODetector` y
-:class:`PlayerTracker` directamente; :func:`tracked_entities_from_detections`
-materializa la lista de :class:`TrackedEntity` que consumirán las estrategias
-de cropping y de punto de apoyo. Cuando se integre SAM 3 sustituiremos esta
-cadena por :class:`SAMTracker` y haremos que produzca entidades con máscara.
+En modo ``botsort`` el orquestador usa :class:`PlayerTracker` (BoT-SORT) y
+:func:`tracked_entities_from_detections` materializa entidades sin máscara.
+En modo ``sam`` :class:`SAMTracker` produce entidades con máscara GPU.
 """
 
 from __future__ import annotations
@@ -40,10 +38,8 @@ class ITracker(ABC):
 def tracked_entities_from_detections(detections: sv.Detections) -> List[TrackedEntity]:
     """Construye ``List[TrackedEntity]`` a partir de un ``sv.Detections``.
 
-    Adaptador puente para la primera iteración: el orquestador sigue usando
-    el pipeline clásico (YOLO + BoT-SORT) y, justo después del tracking,
-    materializa las entidades para que las downstream strategies puedan
-    operar sobre ellas. ``mask`` queda en ``None`` por construcción.
+    Adaptador puente en modo ``botsort``: tras BoT-SORT, materializa entidades
+    para equipos, OCR y proyección 2D. ``mask`` queda en ``None``.
     """
 
     if detections is None or len(detections) == 0:
