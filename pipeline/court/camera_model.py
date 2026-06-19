@@ -90,6 +90,12 @@ class PnPCameraEstimator:
         self._last_inliers: int = 0
         self._last_residual: float = float("inf")
 
+        # Matriz de proyección 3x4 P = K·[R | t] del último fit por pose. A
+        # diferencia de la homografía (que descarta la columna Z para el plano
+        # del suelo), P conserva la dimensión vertical y permite reconstruir
+        # posiciones 3D del balón (método del cap. 5 de Pirotta).
+        self._last_P: Optional[np.ndarray] = None
+
         if settings.pnp_focal_override > 0.0:
             self._focal = float(settings.pnp_focal_override)
 
@@ -109,7 +115,45 @@ class PnPCameraEstimator:
         self._last_conf = 0.0
         self._last_inliers = 0
         self._last_residual = float("inf")
+        self._last_P = None
         # La focal y el punto principal NO se resetean: son globales del vídeo.
+
+    def projection_matrix(self) -> Optional[np.ndarray]:
+        """Matriz de proyección 3x4 P = K·[R|t] del último fit por pose, en
+        unidades de cancha (pies). ``None`` si aún no hay pose válida (focal sin
+        calibrar o PnP fallido sin holdover). Necesaria para la reconstrucción
+        3D del balón (``pipeline.court.ball_3d``)."""
+        return None if self._last_P is None else self._last_P.copy()
+
+    def intrinsics(self) -> Optional[np.ndarray]:
+        """Matriz de intrínsecos K (3x3) si la focal ya está calibrada."""
+        return None if self._K is None else self._K.copy()
+
+    def solve_projection(
+        self, kp_xy: np.ndarray, valid_mask: np.ndarray,
+    ) -> Optional[np.ndarray]:
+        """Calcula P = K·[R|t] para *este* frame con un PnP plano y tolerante.
+
+        Pensado para la reconstrucción 3D offline: a diferencia de ``update()``
+        (que exige un RANSAC a ``pnp_ransac_reproj_px`` ≈ 5 px y por eso casi
+        nunca se activa con keypoints de retransmisión ruidosos), aquí se usa
+        ``cv2.solvePnP`` IPPE directo sobre los puntos válidos. Devuelve la P en
+        unidades de cancha (pies) o ``None`` si falta calibración o hay < 4
+        puntos. No modifica el estado del estimador en vivo."""
+        if self._K is None or int(valid_mask.sum()) < 4:
+            return None
+        obj = self._world_3d[valid_mask].astype(np.float64)
+        img = kp_xy[valid_mask].astype(np.float64)
+        try:
+            ok, rvec, tvec = cv2.solvePnP(
+                obj, img, self._K, None, flags=cv2.SOLVEPNP_IPPE,
+            )
+        except cv2.error:
+            return None
+        if not ok:
+            return None
+        R, _ = cv2.Rodrigues(rvec)
+        return (self._K @ np.column_stack([R, tvec.reshape(3)])).astype(np.float64)
 
     # ------------------------------------------------------------------
     def update(
@@ -271,6 +315,8 @@ class PnPCameraEstimator:
         used_cached: bool,
     ) -> HomographyEstimate:
         R, _ = cv2.Rodrigues(rvec)
+        # Matriz de proyección completa mundo(pies)→imagen: P = K·[R | t] (3x4).
+        self._last_P = (self._K @ np.column_stack([R, tvec])).astype(np.float64)
         H_w2i = self._K @ np.column_stack([R[:, 0], R[:, 1], tvec])
         try:
             H_i2w = np.linalg.inv(H_w2i)
