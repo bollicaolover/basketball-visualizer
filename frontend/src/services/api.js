@@ -161,6 +161,17 @@ export const outputs = {
       return false
     }
   },
+
+  /** Pantallas (screens) reconocidas, o null si no hay. */
+  async tactics(jobId) {
+    try {
+      const res = await fetch(`${BASE}/outputs/${jobId}/tactics.json`)
+      if (!res.ok) return null
+      return await res.json()
+    } catch {
+      return null
+    }
+  },
 }
 
 /** Imagen estática de la pista para el minimapa. */

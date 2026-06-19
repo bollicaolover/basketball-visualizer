@@ -70,6 +70,7 @@
           </svg>
           <span class="roster-btn-text">{{ upload.rosterFile.value ? upload.rosterFile.value.name : 'Roster JSON · opcional' }}</span>
         </button>
+        <button class="tip-btn" type="button" data-tip="roster" aria-label="Más información sobre Roster JSON">?</button>
         <button v-if="upload.rosterFile.value" class="roster-clear" type="button" title="Quitar roster" @click="upload.clearRoster">✕</button>
       </div>
 
@@ -77,29 +78,36 @@
       <div class="tracker-config">
         <span class="tracker-label">SEGUIMIENTO</span>
         <div class="tracker-options">
-          <button
-            type="button"
-            class="tracker-opt"
-            :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'sam' }"
-            @click="tracker.setTrackerMode('sam')"
-          >
-            SAM 3
-            <span class="tracker-opt-sub">máscaras · dorsales</span>
-          </button>
-          <button
-            type="button"
-            class="tracker-opt"
-            :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'botsort' }"
-            @click="tracker.setTrackerMode('botsort')"
-          >
-            BoT-SORT
-            <span class="tracker-opt-sub">rápido · bbox</span>
-          </button>
+          <div class="tracker-opt-wrap">
+            <button
+              type="button"
+              class="tracker-opt"
+              :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'sam' }"
+              @click="tracker.setTrackerMode('sam')"
+            >
+              SAM 3
+              <span class="tracker-opt-sub">máscaras · dorsales</span>
+            </button>
+            <button class="tip-btn tip-btn--inside" type="button" data-tip="sam3" aria-label="Más información sobre SAM 3">?</button>
+          </div>
+          <div class="tracker-opt-wrap">
+            <button
+              type="button"
+              class="tracker-opt"
+              :class="{ 'tracker-opt--active': tracker.trackerMode.value === 'botsort' }"
+              @click="tracker.setTrackerMode('botsort')"
+            >
+              BoT-SORT
+              <span class="tracker-opt-sub">rápido · bbox</span>
+            </button>
+            <button class="tip-btn tip-btn--inside" type="button" data-tip="botsort" aria-label="Más información sobre BoT-SORT">?</button>
+          </div>
         </div>
       </div>
 
       <!-- GPU configuration -->
       <div v-if="gpus.availableGpus.value.length" class="gpu-config">
+        <div class="gpu-toggle-row">
         <button class="gpu-toggle" type="button" @click="gpus.showGpuConfig.value = !gpus.showGpuConfig.value">
           <svg class="gpu-chip-ico" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
             <rect x="2" y="2" width="12" height="12" rx="1.5"/>
@@ -110,6 +118,8 @@
             <path d="M4 6l4 4 4-4"/>
           </svg>
         </button>
+          <button class="tip-btn" type="button" data-tip="gpu" aria-label="Más información sobre GPU">?</button>
+        </div>
 
         <div v-if="gpus.showGpuConfig.value" class="gpu-panel">
           <label class="gpu-item gpu-item--auto">
@@ -210,6 +220,33 @@
       </div>
     </div>
 
+    <!-- Tooltip cards (teleport a body para evitar clipping del sidebar) -->
+    <Teleport to="body">
+      <div class="tip-card" id="tip-roster">
+        <span class="tip-card-title">Roster JSON</span>
+        <span class="tip-card-tag tip-card-tag--opt">Opcional</span>
+        <p>Archivo JSON que asocia dorsales a nombres de jugadores y colores de equipo. Sin roster el sistema etiqueta con números.</p>
+        <p>Formato: <code>{"home":[{"number":7,"name":"Bird"}],"visitor":[…]}</code></p>
+      </div>
+      <div class="tip-card" id="tip-sam3">
+        <span class="tip-card-title">SAM 3 — Segment Anything</span>
+        <span class="tip-card-tag tip-card-tag--prec">Más preciso</span>
+        <p>Segmenta a cada jugador fotograma a fotograma para leer el dorsal del jersey con alta fiabilidad.</p>
+        <p>Más lento que BoT-SORT. Mejor para clips cortos donde la identificación exacta importa.</p>
+      </div>
+      <div class="tip-card" id="tip-botsort">
+        <span class="tip-card-title">BoT-SORT — Multi-object tracker</span>
+        <span class="tip-card-tag tip-card-tag--fast">Más rápido</span>
+        <p>Seguimiento por bounding boxes (bbox). No lee dorsales, pero procesa el vídeo significativamente más rápido.</p>
+        <p>Ideal para clips largos o cuando la velocidad es prioritaria sobre la identificación exacta.</p>
+      </div>
+      <div class="tip-card" id="tip-gpu">
+        <span class="tip-card-title">Selección de GPU</span>
+        <p><strong>Auto</strong> elige la GPU con más memoria libre. Este servidor tiene 2× A100 40 GB disponibles.</p>
+        <p>Fija una GPU específica para reservar la otra. Con varias activas el vídeo se divide en trozos y la identidad puede reiniciarse en cada frontera.</p>
+      </div>
+    </Teleport>
+
     <!-- Modal de procesamiento (teleport a body) -->
     <ProcessingModal
       :visible="upload.showProcessingModal.value"
@@ -260,7 +297,90 @@ const upload     = useUploadJob({
 onMounted(() => {
   gpus.refresh()
   testVideos.refresh()
+  setupTips()
 })
+
+let _openTipBtn = null
+function closeTip() {
+  if (_openTipBtn) {
+    document.getElementById('tip-' + _openTipBtn.dataset.tip)?.classList.remove('tip-show')
+    _openTipBtn.classList.remove('tip-open')
+    _openTipBtn = null
+  }
+}
+function positionTip(btn, card) {
+  const r = btn.getBoundingClientRect()
+  const gap = 8
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const w = card.offsetWidth || 220
+  const h = card.offsetHeight || 80
+
+  // Use the sidebar's right edge as the overflow boundary so tooltips never
+  // extend past it (the sidebar stacking context clips fixed children in practice)
+  const sidebar = document.querySelector('.sidebar')
+  const rightBound = sidebar ? sidebar.getBoundingClientRect().right - gap : vw - gap
+
+  // Vertical: prefer above, fall below if not enough room above
+  let top = r.top - h - gap
+  if (top < gap) top = r.bottom + gap
+  top = Math.max(gap, Math.min(top, vh - h - gap))
+
+  // Horizontal: center on button first, then flip rightward if it overflows the boundary
+  let left = r.left + r.width / 2 - w / 2
+  if (left + w > rightBound) {
+    left = r.right - w  // right-align to button: tooltip extends leftward
+  }
+  left = Math.max(gap, Math.min(left, vw - w - gap))
+
+  card.style.top = top + 'px'
+  card.style.left = left + 'px'
+}
+function setupTips() {
+  document.querySelectorAll('.tip-btn[data-tip]').forEach(btn => {
+    const card = document.getElementById('tip-' + btn.dataset.tip)
+    if (!card) return
+    btn.addEventListener('mouseenter', () => {
+      if (_openTipBtn && _openTipBtn !== btn) closeTip()
+      positionTip(btn, card)
+      card.classList.add('tip-show')
+      btn.classList.add('tip-open')
+      _openTipBtn = btn
+    })
+    btn.addEventListener('mouseleave', e => {
+      if (!card.contains(e.relatedTarget)) {
+        card.classList.remove('tip-show')
+        btn.classList.remove('tip-open')
+        if (_openTipBtn === btn) _openTipBtn = null
+      }
+    })
+    card.addEventListener('mouseleave', e => {
+      if (!btn.contains(e.relatedTarget)) {
+        card.classList.remove('tip-show')
+        btn.classList.remove('tip-open')
+        if (_openTipBtn === btn) _openTipBtn = null
+      }
+    })
+    btn.addEventListener('click', e => {
+      e.stopPropagation()
+      if (card.classList.contains('tip-show') && _openTipBtn === btn) {
+        closeTip()
+      } else {
+        closeTip()
+        positionTip(btn, card)
+        card.classList.add('tip-show')
+        btn.classList.add('tip-open')
+        _openTipBtn = btn
+      }
+    })
+  })
+  document.addEventListener('click', e => {
+    if (_openTipBtn && !_openTipBtn.contains(e.target)) closeTip()
+  })
+  window.addEventListener('scroll', () => {
+    if (_openTipBtn) positionTip(_openTipBtn, document.getElementById('tip-' + _openTipBtn.dataset.tip))
+  }, true)
+}
 </script>
 
 <style>
@@ -405,6 +525,94 @@ onMounted(() => {
   text-transform: uppercase;
 }
 .s-section-label--accent { color: var(--c-gold); }
+
+/* ── Tooltip "?" badge ── */
+.tip-btn {
+  flex-shrink: 0;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--c-line-2);
+  background: var(--c-ink-3);
+  color: var(--c-chalk-faint);
+  font-size: 9px; font-weight: 600;
+  line-height: 1;
+  font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  position: relative; z-index: 2;
+  opacity: 0.7;
+  transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+}
+.tip-btn:hover,
+.tip-btn.tip-open {
+  border-color: var(--c-chalk-faint);
+  color: var(--c-chalk-dim);
+  opacity: 1;
+}
+.tip-btn--inside {
+  position: absolute;
+  top: -6px; right: -6px;
+}
+
+/* ── Tooltip card (rendered via Teleport to body) ── */
+:global(.tip-card) {
+  position: fixed;
+  z-index: 9999;
+  width: 220px;
+  background: var(--c-ink-1);
+  border: 1px solid var(--c-line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+:global(.tip-card.tip-show) {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+:global(.tip-card-title) {
+  font-size: var(--text-sm); font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  display: block; margin-bottom: 3px;
+}
+:global(.tip-card-tag) {
+  display: inline-block;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 1px 4px; border-radius: 2px; margin-bottom: 5px;
+}
+:global(.tip-card-tag--opt)  { background: rgba(var(--c-gold-rgb), .12); color: var(--c-gold); }
+:global(.tip-card-tag--fast) { background: rgba(var(--c-blue-rgb), .12); color: var(--c-blue-hover); }
+:global(.tip-card-tag--prec) { background: rgba(var(--c-orange-rgb), .12); color: var(--c-orange); }
+:global(.tip-card p + p) { margin-top: 4px; }
+:global(.tip-card code) {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(var(--c-white-rgb), .05);
+  padding: 1px 3px; border-radius: 2px;
+  color: var(--c-chalk-dim);
+}
+:global(.tip-card strong) { color: var(--c-chalk); font-weight: 600; }
+
+/* ── Tracker opt wrap (positions the "?" badge) ── */
+.tracker-opt-wrap { position: relative; overflow: visible; }
+.tracker-opt-wrap .tracker-opt { width: 100%; }
+
+/* ── GPU toggle row ── */
+.gpu-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.gpu-toggle-row .gpu-toggle { flex: 1; }
 
 /* ── Roster (JSON opcional) ── */
 .roster-pick {

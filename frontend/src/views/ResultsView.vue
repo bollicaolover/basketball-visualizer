@@ -238,9 +238,15 @@
                   <span class="toggle-label">ARO</span>
                 </label>
               </div>
-              <div v-if="hasShot3dLayer" class="legend-row">
-                <label class="toggle-item">
-                  <input type="checkbox" class="toggle-input" :checked="filters.trajectory" @change="toggleFilter('trajectory')">
+              <div class="legend-row">
+                <label class="toggle-item" :class="{ 'toggle-item--disabled': !hasTrajectoryData }" :title="trajectoryHint">
+                  <input
+                    type="checkbox"
+                    class="toggle-input"
+                    :checked="filters.trajectory"
+                    :disabled="!hasTrajectoryData"
+                    @change="toggleFilter('trajectory')"
+                  >
                   <span class="toggle-switch toggle-switch--traj" :style="{ '--toggle-color': PALETTE.gold }"></span>
                   <span class="toggle-label">TRAYECTORIA</span>
                 </label>
@@ -287,6 +293,37 @@
             ></canvas>
           </div>
         </div>
+
+          <!-- Jugadas reconocidas -->
+          <div class="card screens-card">
+            <div class="card-header jugadas-header">
+              <span class="card-label">JUGADAS</span>
+              <select v-model="activePlayType" class="play-type-select">
+                <option value="screens">BLOQUEO</option>
+              </select>
+              <span class="screens-count">{{ activePlayCount }}</span>
+            </div>
+            <div class="screens-body">
+              <template v-if="activePlayType === 'screens'">
+                <p v-if="!screensView.length" class="screens-empty">
+                  Sin bloqueos detectados en este clip.
+                </p>
+                <button
+                  v-for="s in screensView"
+                  :key="s.id"
+                  class="screen-row"
+                  :class="[`screen-row--${s.type}`, { 'screen-row--active': s.id === activeScreenId }]"
+                  :title="`Saltar al bloqueo (frame ${s.screenFrame})`"
+                  @click="goToScreen(s)"
+                >
+                  <span class="screen-badge">{{ s.label }}</span>
+                  <span class="screen-team">{{ s.teamName }}</span>
+                  <span class="screen-time">{{ s.time.toFixed(2) }}s</span>
+                  <span class="screen-frame">f{{ s.screenFrame }}</span>
+                </button>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -305,6 +342,7 @@ import { PALETTE, BOX_COLORS, MAP_FILL, MAP_TRAIL, CANVAS_INK } from '../config/
 import { actionLabel, teamPrefix } from '../utils/labels.js'
 import { fmtTime } from '../utils/format.js'
 import { outputs, courtImageUrl } from '../services/api.js'
+import { buildTrajectoryOverlay } from '../utils/shotTrajectory.js'
 
 const props = defineProps({ jobId: String })
 const emit = defineEmits(['reset'])
@@ -321,10 +359,20 @@ const OVERLAY_SRC = outputs.overlayVideoUrl(props.jobId)
 const videoSrc = ref(CLEAN_SRC)
 const usingClean = ref(true)
 const shot3dOverlay = ref(null)
-const hasShot3dLayer = computed(() => {
-  const ov = shot3dOverlay.value?.overlay
+const trajectoryOverlay = ref(null)
+// Pantallas (screens) reconocidas por pipeline/tactics (Chen et al. 2012).
+const screens = ref([])
+// Tipo de jugada activo en la card JUGADAS.
+const activePlayType = ref('screens')
+const hasTrajectoryData = computed(() => {
+  const ov = trajectoryOverlay.value
   return ov && Object.keys(ov.frames ?? {}).length > 0
 })
+const trajectoryHint = computed(() =>
+  hasTrajectoryData.value
+    ? 'Parábola del tiro (3D o estimada desde el balón)'
+    : 'Sin tiro detectado en este clip',
+)
 const videoError = ref('')
 const metadataError = ref('')
 const playing = ref(false)
@@ -600,8 +648,10 @@ let pendingSeekTime = null   // última posición pedida mientras seekeaba
 let boxResizeObs = null
 
 onMounted(async () => {
-  await loadShot3dOverlay()
   await loadMetadata()
+  await loadShot3dOverlay()
+  ensureTrajectoryOverlay()
+  await loadTactics()
   loadCourtImage()
   // Repinta la capa de cajas cuando cambia el tamaño mostrado del vídeo
   // (redimensionar ventana, arrastrar el divisor de paneles, etc.).
@@ -613,7 +663,77 @@ onMounted(async () => {
 
 async function loadShot3dOverlay() {
   const data = await outputs.shot3dJson(props.jobId)
-  if (data?.overlay?.frames) shot3dOverlay.value = data
+  if (!data) return
+  shot3dOverlay.value = data
+  if (data.overlay?.frames && Object.keys(data.overlay.frames).length) {
+    trajectoryOverlay.value = data.overlay
+  }
+}
+
+function ensureTrajectoryOverlay() {
+  if (trajectoryOverlay.value) return
+  const fps = shot3dOverlay.value?.fps ?? 30
+  const built = buildTrajectoryOverlay(framesData.value, fps)
+  if (built) trajectoryOverlay.value = built
+}
+
+// ── Pantallas (screens) ─────────────────────────────────────────────────────
+async function loadTactics() {
+  const data = await outputs.tactics(props.jobId)
+  screens.value = Array.isArray(data?.screens) ? data.screens : []
+}
+
+const SCREEN_LABELS = { front: 'FRONT', back: 'BACK', down: 'DOWN', undefined: '—' }
+
+// Timestamp (s) de un frame_index, leído de la metadata (o estimado por fps).
+function frameTimestamp(frameIndex) {
+  const fr = framesData.value.find((f) => f.frame_index === frameIndex)
+  if (fr && typeof fr.timestamp === 'number') return fr.timestamp
+  const fps = shot3dOverlay.value?.fps ?? 30
+  return frameIndex / fps
+}
+
+// Pantalla cuyo rango [start_frame, end_frame] contiene el frame dado, o null.
+function activeScreenForFrame(frameIdx) {
+  if (frameIdx == null) return null
+  return screens.value.find(s => frameIdx >= s.start_frame && frameIdx <= s.end_frame) ?? null
+}
+
+// Vista de la lista: tipo, equipo, instante y frame de salto (cuando se fija).
+const screensView = computed(() =>
+  screens.value.map((s, i) => {
+    const t = frameTimestamp(s.screen_frame)
+    return {
+      id: i,
+      type: s.screen_type,
+      label: SCREEN_LABELS[s.screen_type] ?? '—',
+      teamName: s.team === 'white' ? teamNames.value[0]
+        : s.team === 'dark' ? teamNames.value[1] : '—',
+      team: s.team,
+      time: t,
+      startFrame: s.start_frame,
+      endFrame: s.end_frame,
+      screenFrame: s.screen_frame,
+    }
+  }),
+)
+
+// Número de eventos del tipo activo (para el badge del header).
+const activePlayCount = computed(() =>
+  activePlayType.value === 'screens' ? screensView.value.length : 0,
+)
+
+// Pantalla "activa": aquella cuyo rango contiene el frame mostrado ahora mismo.
+const activeScreenId = computed(() => {
+  const fi = currentFrame.value?.frame_index
+  if (fi == null) return -1
+  const hit = screensView.value.find((s) => fi >= s.startFrame && fi <= s.endFrame)
+  return hit ? hit.id : -1
+})
+
+function goToScreen(s) {
+  if (!videoEl.value) return
+  videoEl.value.currentTime = Math.max(0, Math.min(duration.value, s.time))
 }
 
 onUnmounted(() => {
@@ -1013,6 +1133,47 @@ function drawCanvas(frame) {
     }
   }
 
+  // Overlay de bloqueo activo: anillo sólido (screener), anillo discontinuo
+  // (screenee) y línea punteada entre ambos, con color por tipo de pantalla.
+  const activeScr = activeScreenForFrame(frame.frame_index)
+  if (activeScr) {
+    const SCOL = { front: PALETTE.teal, back: PALETTE.gold, down: PALETTE.orange }
+    const col = SCOL[activeScr.screen_type] ?? PALETTE.chalk
+    const scrP = frame.players.find(p => p.track_id === activeScr.screener_track)
+    const seeP = frame.players.find(p => p.track_id === activeScr.screenee_track)
+    if (scrP && seeP) {
+      const [sx, sy] = courtXY(scrP)
+      const [ex, ey] = courtXY(seeP)
+      ctx.save()
+      // Línea punteada entre ambos
+      ctx.globalAlpha = 0.7
+      ctx.setLineDash([5, 3])
+      ctx.strokeStyle = col
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(sx, sy)
+      ctx.lineTo(ex, ey)
+      ctx.stroke()
+      // Anillo screener (sólido)
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.beginPath()
+      ctx.arc(sx, sy, 21, 0, Math.PI * 2)
+      ctx.strokeStyle = col
+      ctx.lineWidth = 3
+      ctx.stroke()
+      // Anillo screenee (discontinuo)
+      ctx.setLineDash([4, 3])
+      ctx.beginPath()
+      ctx.arc(ex, ey, 21, 0, Math.PI * 2)
+      ctx.lineWidth = 2.5
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.restore()
+      drawActionTag(ctx, sx, sy - 30, 'BLQ', col)
+    }
+  }
+
   if (frame.shot_side) {
     // Baskets are at center width (y=25ft) → px; near top/bottom → py
     const made = frame.shot_made === true
@@ -1119,8 +1280,8 @@ function vidPt(t, vx, vy) {
 }
 
 function drawShot3d(ctx, t, frameIdx) {
-  if (!filters.trajectory || !shot3dOverlay.value?.overlay) return
-  const ov = shot3dOverlay.value.overlay
+  if (!filters.trajectory || !trajectoryOverlay.value) return
+  const ov = trajectoryOverlay.value
   const fr = ov.frames[String(frameIdx)]
   if (!fr) return
 
@@ -1191,7 +1352,10 @@ function drawShot3d(ctx, t, frameIdx) {
     ctx.fillStyle = PALETTE.yellow
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    ctx.fillText(`ápice ${hud.apex_m} m | RMSE ${hud.rmse_px}px`, t.ox + 20, t.oy + 20)
+    const label = hud.apex_m != null
+      ? `ápice ${hud.apex_m} m | RMSE ${hud.rmse_px}px`
+      : 'trayectoria estimada (2D)'
+    ctx.fillText(label, t.ox + 20, t.oy + 20)
   }
 }
 
@@ -1242,6 +1406,26 @@ function drawBoxes() {
       tagBox(ctx, box.x, box.y, label, isSel ? PALETTE.navyDeep : color)
     }
     ctx.globalAlpha = 1
+  }
+
+  // Recuadros especiales para los participantes en la pantalla activa.
+  const activeScrV = activeScreenForFrame(frame.frame_index)
+  if (activeScrV) {
+    const SCOL = { front: PALETTE.teal, back: PALETTE.gold, down: PALETTE.orange }
+    const col = SCOL[activeScrV.screen_type] ?? PALETTE.chalk
+    const scrP = frame.players.find(p => p.track_id === activeScrV.screener_track && p.bbox)
+    const seeP = frame.players.find(p => p.track_id === activeScrV.screenee_track && p.bbox)
+    if (scrP) {
+      const b = strokeBox(ctx, t, [scrP.bbox[0]-2, scrP.bbox[1]-2, scrP.bbox[2]+2, scrP.bbox[3]+2], col, 3)
+      tagBox(ctx, b.x, b.y, 'BLQ', col)
+    }
+    if (seeP) {
+      ctx.save()
+      ctx.setLineDash([5, 3])
+      strokeBox(ctx, t, [seeP.bbox[0]-2, seeP.bbox[1]-2, seeP.bbox[2]+2, seeP.bbox[3]+2], col, 2.5)
+      ctx.setLineDash([])
+      ctx.restore()
+    }
   }
 
   if (filters.possessorOnly) return
@@ -1361,6 +1545,141 @@ function setSpeed(s) {
 /* Cards inside right-col keep full width during animation */
 .right-col .map-card {
   min-width: var(--map-panel-w);
+}
+
+/* ── Jugadas (bloqueos + futuros tipos) ── */
+.screens-card {
+  min-width: var(--map-panel-w);
+  min-height: 0;
+}
+.jugadas-header {
+  gap: 0.5rem;
+}
+.play-type-select {
+  width: 88px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-on-navy);
+  border: 1px solid rgba(var(--c-gold-rgb), 0.35);
+  border-radius: 5px;
+  padding: 2px 6px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  text-transform: uppercase;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23fdc500' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 20px;
+}
+.play-type-select:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(var(--c-gold-rgb), 0.6);
+}
+.play-type-select option {
+  background: var(--c-navy-deep);
+  color: var(--text-on-navy);
+}
+.screens-count {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--c-navy-deep);
+  background: rgba(var(--c-gold-rgb), 0.85);
+  border-radius: 9px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+.screens-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg-panel);
+  max-height: 210px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--c-gold-rgb), 0.4) transparent;
+}
+.screens-body::-webkit-scrollbar { width: 4px; }
+.screens-body::-webkit-scrollbar-track { background: transparent; }
+.screens-body::-webkit-scrollbar-thumb {
+  background: rgba(var(--c-gold-rgb), 0.4);
+  border-radius: 2px;
+}
+.screens-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--c-gold-rgb), 0.7);
+}
+.screens-empty {
+  margin: 0;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 10px 4px;
+}
+.screen-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--c-ink-3);
+  border: 1px solid var(--border-mid);
+  border-left: 3px solid var(--border-mid);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.screen-row:hover { background: var(--bg-panel); }
+.screen-row--active {
+  background: rgba(var(--c-gold-rgb), 0.12);
+  border-color: rgba(var(--c-gold-rgb), 0.6);
+}
+.screen-row--front { border-left-color: var(--c-teal); }
+.screen-row--back  { border-left-color: var(--c-gold); }
+.screen-row--down  { border-left-color: var(--accent-rust); }
+.screen-badge {
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-on-navy);
+  background: var(--c-navy-deep);
+  border-radius: 4px;
+  padding: 2px 6px;
+  min-width: 46px;
+  text-align: center;
+}
+.screen-row--front .screen-badge { background: rgba(var(--c-teal-rgb), 0.9); color: var(--c-navy-deep); }
+.screen-row--back  .screen-badge { background: rgba(var(--c-gold-rgb), 0.9); color: var(--c-navy-deep); }
+.screen-row--down  .screen-badge { background: rgba(var(--c-rust-rgb), 0.9); color: #fff; }
+.screen-team {
+  flex: 1;
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  color: var(--text-on-navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.screen-time {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+.screen-frame {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  opacity: 0.65;
 }
 
 /* ── Pestaña del drawer (borde izquierdo del panel derecho) ── */
@@ -1636,6 +1955,15 @@ function setSpeed(s) {
 
 .toggle-input:checked + .toggle-switch { background: var(--toggle-color, var(--c-blue)); border-color: var(--toggle-color, var(--c-blue)); }
 
+.toggle-item--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.toggle-item--disabled .toggle-input {
+  cursor: not-allowed;
+}
+
 .toggle-label {
   font-size: 10px;
   font-weight: 600;
@@ -1790,7 +2118,6 @@ function setSpeed(s) {
 .map-card {
   flex: 1;
   min-height: 0;
-  height: 100%;
   border-radius: 10px 0 0 10px;
   border-right: none;
   box-shadow: -2px 0 10px rgba(var(--c-navy-deep-rgb), 0.08);
