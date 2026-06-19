@@ -60,6 +60,9 @@ class FrameContext:
     # Eventos: resultado del último tiro (resaltado durante varios frames)
     shot_side: Optional[str] = None   # "left" | "right"
     shot_made: Optional[bool] = None  # True = acierto, False = fallo, None = nada
+    # Suelta del tiro detectada por pose en este frame (o None). Tipo:
+    # pipeline.scoring.release_detector.ReleaseEvent.
+    release_event: Optional[object] = None
 
     # Salidas
     overlay_frame: Optional[np.ndarray] = None

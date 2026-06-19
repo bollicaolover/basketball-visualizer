@@ -30,6 +30,22 @@ def main() -> None:
         help="Nombres de los dos equipos separados por coma, p.ej. 'Lakers,Warriors'. "
              "Necesario para que el lookup del roster funcione.",
     )
+    ap.add_argument(
+        "--tracker",
+        choices=("sam", "botsort"),
+        default="sam",
+        help="backend de tracking de jugadores: sam (máscaras) o botsort (BoT-SORT, más rápido)",
+    )
+    ap.add_argument(
+        "--ball-tracker",
+        choices=("ema", "kalman"),
+        default=None,
+        help="seguimiento del balón: ema (suavizado original) o kalman (Kalman + "
+             "validación de trayectoria, método Pirotta)",
+    )
+    ap.add_argument("--shot3d", action="store_true", help="reconstrucción 3D del tiro (requiere --metadata)")
+    ap.add_argument("--no-shot3d", action="store_true", help="desactivar reconstrucción 3D")
+    ap.add_argument("--no-shot3d-pose", action="store_true", help="sin suelta por pose en la 3D")
     args = ap.parse_args()
 
     settings = Settings.default()
@@ -53,6 +69,15 @@ def main() -> None:
             settings.teams.team_names = (parts[0], parts[1])
         else:
             ap.error("--team-names requiere exactamente dos nombres separados por coma")
+    settings.tracker_mode = args.tracker
+    if args.ball_tracker is not None:
+        settings.ball_tracking.method = args.ball_tracker
+    if args.shot3d:
+        settings.shot3d.enabled = True
+    if args.no_shot3d:
+        settings.shot3d.enabled = False
+    if args.no_shot3d_pose:
+        settings.shot3d.pose_release = False
 
     Pipeline(settings).process_video(args.input, args.output)
 

@@ -27,3 +27,9 @@ peft
 # Descarga de datasets de Roboflow (solo entrenamiento, no runtime)
 roboflow
 python-dotenv
+
+# Pruebas (suite de tests del cap. 7 — lógica pura, sin GPU)
+pytest
+
+# Tracking BoT-SORT (modo --tracker botsort; ya en el entorno conda tfg-baloncesto)
+boxmot
