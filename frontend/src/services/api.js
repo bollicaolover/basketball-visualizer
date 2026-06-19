@@ -74,12 +74,13 @@ export const testVideos = {
   },
 
   /** Lanza el análisis de un vídeo de prueba. Devuelve { job_id }. */
-  async process(name, { gpus, memFraction, team1, team2 }) {
+  async process(name, { gpus, memFraction, team1, team2, tracker }) {
     const qs = new URLSearchParams({
       gpus,
       mem_fraction: String(memFraction),
       team1,
       team2,
+      tracker: tracker || 'sam',
     })
     const res = await ensureOk(
       await fetch(`${BASE}/test-videos/${encodeURIComponent(name)}/process?${qs}`, {
@@ -93,13 +94,14 @@ export const testVideos = {
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 export const jobs = {
   /** Sube un vídeo y arranca el pipeline. Devuelve { job_id }. */
-  async upload({ file, gpus, memFraction, team1, team2, roster }) {
+  async upload({ file, gpus, memFraction, team1, team2, roster, tracker }) {
     const form = new FormData()
     form.append('file', file)
     form.append('gpus', gpus)
     form.append('mem_fraction', String(memFraction))
     form.append('team1', team1)
     form.append('team2', team2)
+    form.append('tracker', tracker || 'sam')
     if (roster) form.append('roster', roster)
     const res = await ensureOk(await fetch(`${BASE}/upload`, { method: 'POST', body: form }))
     return res.json()
@@ -137,6 +139,28 @@ export const outputs = {
 
   cleanVideoUrl:   (jobId) => `${BASE}/outputs/${jobId}/clean.mp4`,
   overlayVideoUrl: (jobId) => `${BASE}/outputs/${jobId}/overlay.mp4`,
+  shot3dVideoUrl:  (jobId) => `${BASE}/outputs/${jobId}/shot3d.mp4`,
+
+  /** Datos de reconstrucción 3D (incluye capa ``overlay`` para el canvas). */
+  async shot3dJson(jobId) {
+    try {
+      const res = await fetch(`${BASE}/outputs/${jobId}/shot3d.json`)
+      if (!res.ok) return null
+      return await res.json()
+    } catch {
+      return null
+    }
+  },
+
+  /** Comprueba si existe la reconstrucción 3D del tiro. */
+  async hasShot3d(jobId) {
+    try {
+      const res = await fetch(`${BASE}/outputs/${jobId}/shot3d.mp4`, { method: 'HEAD' })
+      return res.ok
+    } catch {
+      return false
+    }
+  },
 }
 
 /** Imagen estática de la pista para el minimapa. */

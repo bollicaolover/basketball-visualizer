@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   sidebarCollapsed: 'basket2d_sidebar_collapsed',
   teamNames:        'basket2d_team_names',
   gpuPrefs:         'basket2d_gpu_prefs',
+  trackerMode:      'basket2d_tracker_mode',
   recentAnalyses:   'basket2d_recent',
   boxFilters:       'basket2d_box_filters',
   boxColors:        'basket2d_box_colors',

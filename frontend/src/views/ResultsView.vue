@@ -184,44 +184,66 @@
             </div>
             <div class="legend-grid">
               <div class="legend-row">
+                <label class="color-edit-btn" :style="{ color: teamColors.home }" title="Cambiar color">
+                  <input type="color" :value="teamColors.home" @input="setColor('home', $event.target.value)">
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                </label>
                 <label class="toggle-item toggle-item--switch">
                   <input type="checkbox" class="toggle-input" :checked="filters.home" @change="toggleFilter('home')">
-                  <span class="toggle-switch toggle-switch--home"></span>
+                  <span class="toggle-switch toggle-switch--home" :style="{ '--toggle-color': teamColors.home }"></span>
                 </label>
                 <input class="team-name-input" :value="homeName" maxlength="24" title="Nombre del equipo claro" @change="setTeamName(0, $event.target.value)">
-                <input type="color" class="row-color" :value="teamColors.home" @input="setColor('home', $event.target.value)" title="Color del equipo claro">
               </div>
               <div class="legend-row">
+                <label class="color-edit-btn" :style="{ color: teamColors.visitor }" title="Cambiar color">
+                  <input type="color" :value="teamColors.visitor" @input="setColor('visitor', $event.target.value)">
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                </label>
                 <label class="toggle-item toggle-item--switch">
                   <input type="checkbox" class="toggle-input" :checked="filters.visitor" @change="toggleFilter('visitor')">
-                  <span class="toggle-switch toggle-switch--visitor"></span>
+                  <span class="toggle-switch toggle-switch--visitor" :style="{ '--toggle-color': teamColors.visitor }"></span>
                 </label>
                 <input class="team-name-input" :value="visitorName" maxlength="24" title="Nombre del equipo oscuro" @change="setTeamName(1, $event.target.value)">
-                <input type="color" class="row-color" :value="teamColors.visitor" @input="setColor('visitor', $event.target.value)" title="Color del equipo oscuro">
               </div>
               <div class="legend-row">
+                <label class="color-edit-btn" :style="{ color: teamColors.ball }" title="Cambiar color del balón">
+                  <input type="color" :value="teamColors.ball" @input="setColor('ball', $event.target.value)">
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                </label>
                 <label class="toggle-item">
                   <input type="checkbox" class="toggle-input" :checked="filters.ball" @change="toggleFilter('ball')">
-                  <span class="toggle-switch toggle-switch--ball"></span>
+                  <span class="toggle-switch toggle-switch--ball" :style="{ '--toggle-color': teamColors.ball }"></span>
                   <span class="toggle-label">BALÓN</span>
                 </label>
-                <input type="color" class="row-color" :value="teamColors.ball" @input="setColor('ball', $event.target.value)" title="Color del balón">
               </div>
               <div class="legend-row">
+                <label class="color-edit-btn" :style="{ color: teamColors.ref }" title="Cambiar color del árbitro">
+                  <input type="color" :value="teamColors.ref" @input="setColor('ref', $event.target.value)">
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                </label>
                 <label class="toggle-item">
                   <input type="checkbox" class="toggle-input" :checked="filters.referees" @change="toggleFilter('referees')">
-                  <span class="toggle-switch toggle-switch--ref"></span>
+                  <span class="toggle-switch toggle-switch--ref" :style="{ '--toggle-color': teamColors.ref }"></span>
                   <span class="toggle-label">ÁRBITRO</span>
                 </label>
-                <input type="color" class="row-color" :value="teamColors.ref" @input="setColor('ref', $event.target.value)" title="Color del árbitro">
               </div>
               <div class="legend-row">
+                <label class="color-edit-btn" :style="{ color: teamColors.rim }" title="Cambiar color del aro">
+                  <input type="color" :value="teamColors.rim" @input="setColor('rim', $event.target.value)">
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                </label>
                 <label class="toggle-item">
                   <input type="checkbox" class="toggle-input" :checked="filters.rims" @change="toggleFilter('rims')">
-                  <span class="toggle-switch toggle-switch--rim"></span>
+                  <span class="toggle-switch toggle-switch--rim" :style="{ '--toggle-color': teamColors.rim }"></span>
                   <span class="toggle-label">ARO</span>
                 </label>
-                <input type="color" class="row-color" :value="teamColors.rim" @input="setColor('rim', $event.target.value)" title="Color del aro">
+              </div>
+              <div v-if="hasShot3dLayer" class="legend-row">
+                <label class="toggle-item">
+                  <input type="checkbox" class="toggle-input" :checked="filters.trajectory" @change="toggleFilter('trajectory')">
+                  <span class="toggle-switch toggle-switch--traj" :style="{ '--toggle-color': PALETTE.gold }"></span>
+                  <span class="toggle-label">TRAYECTORIA</span>
+                </label>
               </div>
               <div class="legend-row">
                 <label class="toggle-item">
@@ -298,6 +320,11 @@ const CLEAN_SRC   = outputs.cleanVideoUrl(props.jobId)
 const OVERLAY_SRC = outputs.overlayVideoUrl(props.jobId)
 const videoSrc = ref(CLEAN_SRC)
 const usingClean = ref(true)
+const shot3dOverlay = ref(null)
+const hasShot3dLayer = computed(() => {
+  const ov = shot3dOverlay.value?.overlay
+  return ov && Object.keys(ov.frames ?? {}).length > 0
+})
 const videoError = ref('')
 const metadataError = ref('')
 const playing = ref(false)
@@ -526,7 +553,7 @@ const selectedTrackIds = ref(new Set())
 // ── Filtros de la capa de cajas (persistidos) ───────────────────────────────
 const filters = reactive({
   home: true, visitor: true, ball: true,
-  referees: true, rims: false, possessorOnly: false,
+  referees: true, rims: false, possessorOnly: false, trajectory: false,
   ...(() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.boxFilters) ?? '{}') } catch { return {} } })(),
 })
 function toggleFilter(key) {
@@ -573,6 +600,7 @@ let pendingSeekTime = null   // última posición pedida mientras seekeaba
 let boxResizeObs = null
 
 onMounted(async () => {
+  await loadShot3dOverlay()
   await loadMetadata()
   loadCourtImage()
   // Repinta la capa de cajas cuando cambia el tamaño mostrado del vídeo
@@ -582,6 +610,11 @@ onMounted(async () => {
     boxResizeObs.observe(videoEl.value)
   }
 })
+
+async function loadShot3dOverlay() {
+  const data = await outputs.shot3dJson(props.jobId)
+  if (data?.overlay?.frames) shot3dOverlay.value = data
+}
 
 onUnmounted(() => {
   stopRaf()
@@ -1081,6 +1114,87 @@ function tagBox(ctx, x, y, text, color) {
   ctx.fillText(text, x + 4, y - 7)
 }
 
+function vidPt(t, vx, vy) {
+  return [t.ox + vx * t.scale, t.oy + vy * t.scale]
+}
+
+function drawShot3d(ctx, t, frameIdx) {
+  if (!filters.trajectory || !shot3dOverlay.value?.overlay) return
+  const ov = shot3dOverlay.value.overlay
+  const fr = ov.frames[String(frameIdx)]
+  if (!fr) return
+
+  if (fr.rim) {
+    const [cx, cy, r] = fr.rim
+    const [px, py] = vidPt(t, cx, cy)
+    ctx.beginPath()
+    ctx.arc(px, py, r * t.scale, 0, Math.PI * 2)
+    ctx.strokeStyle = PALETTE.gold
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
+
+  if (fr.arc?.length >= 2) {
+    ctx.beginPath()
+    for (let i = 0; i < fr.arc.length; i++) {
+      const [px, py] = vidPt(t, fr.arc[i][0], fr.arc[i][1])
+      if (i === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
+    }
+    ctx.strokeStyle = PALETTE.yellow
+    ctx.lineWidth = 3
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.stroke()
+  }
+
+  if (fr.end) {
+    const [px, py] = vidPt(t, fr.end[0], fr.end[1])
+    const endColor = fr.end_reason === 'rim' ? PALETTE.orange : PALETTE.slate
+    ctx.beginPath()
+    ctx.arc(px, py, 10, 0, Math.PI * 2)
+    ctx.strokeStyle = endColor
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.font = '600 11px "Inter Variable", system-ui, sans-serif'
+    ctx.fillStyle = endColor
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(fr.end_reason === 'rim' ? 'aro' : 'suelo', px + 12, py + 4)
+  }
+
+  if (fr.ball_proj) {
+    const [px, py] = vidPt(t, fr.ball_proj[0], fr.ball_proj[1])
+    ctx.beginPath()
+    ctx.arc(px, py, 8, 0, Math.PI * 2)
+    ctx.fillStyle = PALETTE.orange
+    ctx.fill()
+    if (fr.ball_z_m != null) {
+      ctx.font = '600 12px "Inter Variable", system-ui, sans-serif'
+      ctx.fillStyle = PALETTE.orange
+      ctx.fillText(`Z=${fr.ball_z_m} m`, px + 12, py - 8)
+    }
+  }
+
+  if (fr.ball_meas) {
+    const [px, py] = vidPt(t, fr.ball_meas[0], fr.ball_meas[1])
+    ctx.beginPath()
+    ctx.arc(px, py, 5, 0, Math.PI * 2)
+    ctx.strokeStyle = PALETTE.green
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
+
+  const hud = ov.hud
+  if (hud && frameIdx === ov.lo) {
+    ctx.font = '600 13px "Inter Variable", system-ui, sans-serif'
+    ctx.fillStyle = PALETTE.yellow
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText(`ápice ${hud.apex_m} m | RMSE ${hud.rmse_px}px`, t.ox + 20, t.oy + 20)
+  }
+}
+
 function drawBoxes() {
   const canvas = boxCanvas.value
   if (!canvas) return
@@ -1095,6 +1209,8 @@ function drawBoxes() {
   const frame = currentFrame.value
   const t = videoTransform()
   if (!frame || !t) return
+
+  drawShot3d(ctx, t, frame.frame_index ?? frame.index ?? 0)
 
   const selIds = selectedTrackIds.value
   const hov = hoveredTrackId.value
@@ -1302,7 +1418,6 @@ function setSpeed(s) {
   color: var(--text-on-navy);
   text-transform: uppercase;
 }
-
 
 .card-body {
   flex: 1;
@@ -1519,9 +1634,7 @@ function setSpeed(s) {
 }
 .toggle-input:checked + .toggle-switch::after { transform: translateX(13px); }
 
-/* On/off neutro: el color de cada entidad lo lleva el swatch contiguo, no el
-   toggle (evita mostrar el color dos veces por fila). */
-.toggle-input:checked + .toggle-switch { background: var(--c-blue); border-color: var(--c-blue); }
+.toggle-input:checked + .toggle-switch { background: var(--toggle-color, var(--c-blue)); border-color: var(--toggle-color, var(--c-blue)); }
 
 .toggle-label {
   font-size: 10px;
@@ -1536,7 +1649,7 @@ function setSpeed(s) {
   text-overflow: ellipsis;
 }
 
-/* ── Fila de filtro: toggle + selector de color pegado a su etiqueta ── */
+/* ── Fila de filtro ── */
 .legend-row {
   display: flex;
   align-items: center;
@@ -1546,7 +1659,34 @@ function setSpeed(s) {
 .legend-row .toggle-item { flex: 0 1 auto; min-width: 0; }
 .legend-row .toggle-item--switch { flex: 0 0 auto; }
 .legend-row .toggle-label { overflow: hidden; text-overflow: ellipsis; }
-/* Nombre de equipo editable: parece una etiqueta, revela el campo al pasar/enfocar. */
+
+/* Botón lápiz: abre el color picker nativo */
+.color-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  position: relative;
+}
+.color-edit-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+.color-edit-btn input[type="color"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Nombre de equipo editable */
 .team-name-input {
   flex: 1 1 auto;
   min-width: 0;
@@ -1565,21 +1705,6 @@ function setSpeed(s) {
 }
 .team-name-input:hover { border-color: var(--border-mid); }
 .team-name-input:focus { border-color: var(--accent-orange); background: var(--bg-main); }
-.row-color {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  flex-shrink: 0;
-  border: 1px solid var(--border-mid);
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-}
-.row-color::-webkit-color-swatch-wrapper { padding: 2px; }
-.row-color::-webkit-color-swatch { border: none; border-radius: 2px; }
-.row-color::-moz-color-swatch { border: none; border-radius: 2px; }
 
 
 /* Botones de reproducción (más grandes, centrados) */
