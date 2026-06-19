@@ -194,6 +194,7 @@ def _run_worker(
     worker_id: int = 0,
     team_names: Optional[list] = None,
     roster_path: Optional[str] = None,
+    tracker: str = "sam",
 ) -> tuple[int, str]:
     """Lanza un subproceso ``pipeline.run`` en la GPU ``gpu`` y reporta progreso.
 
@@ -208,7 +209,9 @@ def _run_worker(
         "--output", str(overlay_path),
         "--metadata",
         "--no-map",
+        "--shot3d",
         "--mem-fraction", str(mem_fraction),
+        "--tracker", tracker,
     ]
     if team_names and len(team_names) == 2 and all(n.strip() for n in team_names):
         # El CLI separa por la primera coma → se sanea para no romper el parseo.
@@ -259,7 +262,8 @@ def _run_worker(
 
 
 def _done_job_payload(job_id: str) -> dict:
-    return {
+    out_dir = DATA_OUTPUTS / job_id
+    payload = {
         "status": "done",
         "job_id": job_id,
         "progress": 100,
@@ -269,12 +273,18 @@ def _done_job_payload(job_id: str) -> dict:
         "metadata_url": f"/api/outputs/{job_id}/metadata.json",
         "annotations_url": f"/api/outputs/{job_id}/annotations",
     }
+    if (out_dir / "shot3d.mp4").exists():
+        payload["shot3d_url"] = f"/api/outputs/{job_id}/shot3d.mp4"
+    if (out_dir / "shot3d.json").exists():
+        payload["shot3d_json_url"] = f"/api/outputs/{job_id}/shot3d.json"
+    return payload
 
 
 def _run_single(
     job_id: str, input_path: Path, overlay_path: Path, gpu: str, mem_fraction: float,
     team_names: Optional[list] = None,
     roster_path: Optional[str] = None,
+    tracker: str = "sam",
 ) -> None:
     """Una GPU: procesa el vídeo completo sin partir (continuidad de identidad)."""
     state = {"done": {"upload"}, "stage": "decode", "progress": 0}
@@ -291,6 +301,8 @@ def _run_single(
             state["done"].add("decode"); state["stage"] = "ai"; state["progress"] = 0
         elif stage in ("render", "metadata"):
             state["done"].update({"decode", "ai"}); state["stage"] = "finalize"
+        elif stage == "shot3d":
+            state["done"].update({"decode", "ai"}); state["stage"] = "finalize"
         if cur is not None and tot:
             state["progress"] = min(99, int(cur / tot * 100))
         _write_job(job_id, {
@@ -303,7 +315,7 @@ def _run_single(
 
     rc, err = _run_worker(
         input_path, overlay_path, gpu, mem_fraction, on_progress,
-        team_names=team_names, roster_path=roster_path,
+        team_names=team_names, roster_path=roster_path, tracker=tracker,
     )
     if rc != 0:
         raise RuntimeError(err)
@@ -420,6 +432,7 @@ def _run_pipeline(
     job_id: str, input_path: Path, output_dir: Path,
     gpus: list, mem_fraction: float, team_names: Optional[list] = None,
     roster_path: Optional[str] = None,
+    tracker: str = "sam",
 ) -> None:
     overlay_path = output_dir / "overlay.mp4"
     try:
@@ -428,15 +441,22 @@ def _run_pipeline(
         # Se usa una sola GPU: de entre las candidatas, la de más memoria libre.
         gpu = _resolve_gpu(gpus)
         if len(gpus) > 1:
-            print(
-                f"[INFO] GPUs candidatas {gpus}; SAM necesita el vídeo completo "
-                f"→ se usa la más libre: GPU {gpu}.",
-                flush=True,
-            )
+            if tracker == "sam":
+                print(
+                    f"[INFO] GPUs candidatas {gpus}; SAM necesita el vídeo completo "
+                    f"→ se usa la más libre: GPU {gpu}.",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"[INFO] GPUs candidatas {gpus}; tracker={tracker} "
+                    f"→ se usa la más libre: GPU {gpu}.",
+                    flush=True,
+                )
         _run_single(
             job_id, input_path, overlay_path,
             gpu, mem_fraction,
-            team_names=team_names, roster_path=roster_path,
+            team_names=team_names, roster_path=roster_path, tracker=tracker,
         )
         input_path.unlink(missing_ok=True)
     except Exception as exc:  # noqa: BLE001
@@ -618,6 +638,16 @@ async def get_system_stats():
 
     return JSONResponse(stats)
 
+VALID_TRACKERS = frozenset({"sam", "botsort"})
+
+
+def _parse_tracker(tracker: str) -> str:
+    t = (tracker or "sam").strip().lower()
+    if t not in VALID_TRACKERS:
+        raise HTTPException(status_code=400, detail=f"Tracker inválido: {tracker!r} (usa sam o botsort)")
+    return t
+
+
 def _parse_team_names(team1: str, team2: str) -> Optional[list]:
     """Dos nombres de equipo del formulario → ``[a, b]`` o None.
 
@@ -666,6 +696,7 @@ async def process_test_video(
     mem_fraction: float = Query(1.0),
     team1: str = Query(""),
     team2: str = Query(""),
+    tracker: str = Query("sam"),
 ):
     # Evitar path traversal: el fichero debe estar exactamente en DATA_TEST_VIDEOS
     src = (DATA_TEST_VIDEOS / filename).resolve()
@@ -677,6 +708,7 @@ async def process_test_video(
     sel_gpus = _parse_gpus(gpus)
     mem_frac = max(0.05, min(1.0, mem_fraction))
     team_names = _parse_team_names(team1, team2)
+    tracker_mode = _parse_tracker(tracker)
 
     job_id = str(uuid.uuid4())
     upload_path = DATA_UPLOADS / f"{job_id}.mp4"
@@ -704,9 +736,15 @@ async def process_test_video(
 
     acquired = _gpu_lock.acquire(blocking=False)
     if not acquired:
-        background_tasks.add_task(_wait_and_run, job_id, upload_path, output_dir, sel_gpus, mem_frac, team_names, roster_path)
+        background_tasks.add_task(
+            _wait_and_run, job_id, upload_path, output_dir, sel_gpus, mem_frac,
+            team_names, roster_path, tracker_mode,
+        )
     else:
-        background_tasks.add_task(_run_pipeline, job_id, upload_path, output_dir, sel_gpus, mem_frac, team_names, roster_path)
+        background_tasks.add_task(
+            _run_pipeline, job_id, upload_path, output_dir, sel_gpus, mem_frac,
+            team_names, roster_path, tracker_mode,
+        )
 
     return {"job_id": job_id}
 
@@ -719,6 +757,7 @@ async def upload_video(
     mem_fraction: float = Form(1.0),
     team1: str = Form(""),
     team2: str = Form(""),
+    tracker: str = Form("sam"),
     roster: Optional[UploadFile] = File(None),
 ):
     if not file.filename or not file.filename.lower().endswith(".mp4"):
@@ -727,6 +766,7 @@ async def upload_video(
     sel_gpus = _parse_gpus(gpus)
     mem_frac = max(0.05, min(1.0, mem_fraction))
     team_names = _parse_team_names(team1, team2)
+    tracker_mode = _parse_tracker(tracker)
 
     job_id = str(uuid.uuid4())
     upload_path = DATA_UPLOADS / f"{job_id}.mp4"
@@ -764,12 +804,12 @@ async def upload_video(
         # Ya hay un trabajo corriendo; encolar de forma simple (espera bloqueante)
         background_tasks.add_task(
             _wait_and_run, job_id, upload_path, output_dir, sel_gpus, mem_frac,
-            team_names, roster_path,
+            team_names, roster_path, tracker_mode,
         )
     else:
         background_tasks.add_task(
             _run_pipeline, job_id, upload_path, output_dir, sel_gpus, mem_frac,
-            team_names, roster_path,
+            team_names, roster_path, tracker_mode,
         )
 
     return {"job_id": job_id}
@@ -779,10 +819,11 @@ def _wait_and_run(
     job_id: str, input_path: Path, output_dir: Path, gpus: list, mem_fraction: float,
     team_names: Optional[list] = None,
     roster_path: Optional[str] = None,
+    tracker: str = "sam",
 ) -> None:
     _gpu_lock.acquire()  # espera a que termine el trabajo anterior
     _run_pipeline(job_id, input_path, output_dir, gpus, mem_fraction,
-                  team_names=team_names, roster_path=roster_path)
+                  team_names=team_names, roster_path=roster_path, tracker=tracker)
 
 
 @app.get("/api/jobs/{job_id}")
@@ -812,6 +853,28 @@ async def get_clean(job_id: str):
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
     return FileResponse(str(path), media_type="video/mp4", filename="clean.mp4")
+
+
+@app.get("/api/outputs/{job_id}/shot3d.mp4")
+async def get_shot3d_video(job_id: str):
+    job = _read_job(job_id)
+    if job.get("status") != "done":
+        raise HTTPException(status_code=202, detail="La trayectoria 3D aún no está lista")
+    path = DATA_OUTPUTS / job_id / "shot3d.mp4"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sin reconstrucción 3D para este análisis")
+    return FileResponse(str(path), media_type="video/mp4", filename="shot3d.mp4")
+
+
+@app.get("/api/outputs/{job_id}/shot3d.json")
+async def get_shot3d_json(job_id: str):
+    job = _read_job(job_id)
+    if job.get("status") != "done":
+        raise HTTPException(status_code=202, detail="La trayectoria 3D aún no está lista")
+    path = DATA_OUTPUTS / job_id / "shot3d.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sin datos 3D para este análisis")
+    return FileResponse(str(path), media_type="application/json")
 
 
 @app.get("/api/outputs/{job_id}/metadata.json")
