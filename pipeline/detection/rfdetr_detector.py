@@ -58,11 +58,14 @@ class RFDETRDetector:
         except Exception:  # noqa: BLE001
             pass
 
-    def detect(self, frame_bgr: np.ndarray) -> sv.Detections:
+    def detect(
+        self, frame_bgr: np.ndarray, threshold: float | None = None,
+    ) -> sv.Detections:
         """Devuelve todas las detecciones del frame (RGB internamente)."""
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        score = self._s.score_threshold if threshold is None else threshold
         detections = self._model.predict(
-            frame_rgb, threshold=self._s.score_threshold,
+            frame_rgb, threshold=score,
         )
         if detections is None or len(detections) == 0:
             return sv.Detections.empty()
