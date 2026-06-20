@@ -92,5 +92,5 @@ Cada decisión metodológica tiene traza directa al código:
 | Kanban WIP=1 | `git log --oneline`: un módulo por commit |
 | Definición of Done explícita | Issues con checklist de criterios de aceptación |
 | Fases CRISP-DM | Labels de GitHub en cada issue |
-| Iteración CRISP-DM | Issue E-3 + commits `10e1736` / `301f6f3` |
+| Iteración CRISP-DM | Issue E-3 + commits `10e1736` (intento) / `54ef5da` (revert: "approach did not work") |
 | Entrega continua | `run.py` ejecutable desde el primer orquestador |
