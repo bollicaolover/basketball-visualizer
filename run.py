@@ -46,6 +46,10 @@ def main() -> None:
     ap.add_argument("--shot3d", action="store_true", help="reconstrucción 3D del tiro (requiere --metadata)")
     ap.add_argument("--no-shot3d", action="store_true", help="desactivar reconstrucción 3D")
     ap.add_argument("--no-shot3d-pose", action="store_true", help="sin suelta por pose en la 3D")
+    ap.add_argument(
+        "--tactics", action="store_true",
+        help="reconocer pantallas (screens) tras el análisis (requiere --metadata)",
+    )
     args = ap.parse_args()
 
     settings = Settings.default()
@@ -78,6 +82,8 @@ def main() -> None:
         settings.shot3d.enabled = False
     if args.no_shot3d_pose:
         settings.shot3d.pose_release = False
+    if args.tactics:
+        settings.tactics.enabled = True
 
     Pipeline(settings).process_video(args.input, args.output)
 
