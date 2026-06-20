@@ -1,0 +1,188 @@
+# Datos reales del proyecto (para la memoria del TFG)
+
+> Extraídos del repositorio y los logs el **16 jun 2026**. Úsense para sustituir
+> las cifras y narrativas inventadas de la plantilla. **Regla: no inventar.** Lo
+> que no esté medido aquí se marca como *pendiente de medición*, no se rellena.
+
+## 1. Cronología real (git) — base para planificación (cap. 5) y Gantt
+
+43 commits, del **2026-01-08** al **2026-06-16**. Dos vías de trabajo en paralelo:
+pipeline ML y aplicación web (commits `[Kanban: WEB-*]`).
+
+**Pipeline ML (fase CRISP-DM por commit):**
+
+| Fecha | Commit | Hito | Fase CRISP-DM |
+|---|---|---|---|
+| 2026-01-08 | e089e45 | Setup, requirements, notebook de referencia | Business Understanding |
+| 2026-01-15 | 9a122cb | Esqueleto pipeline + config (RF-DETR 11 clases) | Business Understanding |
+| 2026-01-22 | 71f2465 | Scripts: descarga dataset + fetch de modelos | Data Understanding |
+| 2026-02-03 | 261e036 | Detector RF-DETR local (11 clases) | Data Preparation |
+| 2026-02-11 | ddacadc | Geometría de cancha, keypoints, segmentos | Data Preparation |
+| 2026-02-18 | 4277600 | Homografía + modelo PnP de cámara | Modeling |
+| 2026-02-26 | 9730a01 | Render 2D cenital + estabilizador + suavizado | Modeling |
+| 2026-03-05 | 404127e | I/O de vídeo + interfaces de tracking | Modeling |
+| 2026-03-12 | be5eca9 | SAM3 tracker (prompt-once con RF-DETR) | Modeling |
+| 2026-03-19 | 6faee31 | Ball tracker + foot point por máscara | Modeling |
+| 2026-03-26 | 7506f54 | Clasificador de equipos SigLIP (no sup.) | Modeling |
+| 2026-04-02 | efc179e | OCR de dorsal SmolVLM2 (voto IoS) | Modeling |
+| 2026-04-09 | 0a129b2 | Roster + scripts de entrenamiento | Modeling |
+| 2026-04-16 | 2485a57 | Resolver de posesión (proximidad + clase) | Evaluation |
+| 2026-04-23 | 65fb57e | Shot tracker (eventos desde clases de acción) | Evaluation |
+| 2026-04-30 | b4c7ca3 | Orquestador principal por frame + profiling | Deployment |
+| 2026-05-08 | 7e775bd | run.py + run_batch.sh | Deployment |
+| 2026-05-20 | 161c5f2 | README + documento de memoria | Deployment |
+
+**Iteración CRISP-DM real (evidencia honesta de proceso iterativo):**
+- 2026-06-14 `10e1736` — intento de segmentar sesiones SAM para frenar la deriva en vídeos largos.
+- 2026-06-14 `54ef5da` — **revertido: "approach did not work"**.
+> Es un ciclo Deployment→problema→Modeling→Evaluation→revert. Cuéntalo tal cual: probar, evaluar, descartar es CRISP-DM legítimo.
+
+**Aplicación web (track WEB):** 29 ene → 27 may.
+
+| Fecha | Commit | Hito |
+|---|---|---|
+| 2026-01-29 | 98f541d | Backend FastAPI: config, DB init, Dockerfile |
+| 2026-02-20 | a398cac | Auth API (validación token HMAC) |
+| 2026-03-16 | 75786cf | Endpoint de subida + transcodificación por trozos |
+| 2026-04-07 | 897e09b | Endpoints de resultados + orquestación subprocess |
+| 2026-04-17 | ad4ce44 | Wrappers de visión backend + asset de cancha |
+| 2026-04-21 | 8487dd8 | Scaffold Vue 3 + Vite + design tokens |
+| 2026-04-28 | 22ced56 | Capa de servicio API + utilidades |
+| 2026-05-05 | 986ba13 | Login + composable de auth (HMAC) |
+| 2026-05-12 | 3e8d156 | Vista de subida (job, polling, config equipo) |
+| 2026-05-16 | 643a9cd | Vista de resultados (vídeo + mapa 2D sincronizados) |
+| 2026-05-19 | 49abcd2 | App shell, sidebar, modal, sparkline, stats GPU |
+| 2026-05-24 | d731242 | Metadata writer (JSON por frame) + run module + roster |
+| 2026-05-27 | b04ef53 | Docker + serve.sh + dist compilado |
+
+> Reemplaza los "Sprint 0–7" inventados de la plantilla (línea 5087) por esta
+> cronología real. Sustituye las fechas ficticias y la historia de "ID swaps en
+> Sprint 4 / PARSeq en Sprint 5".
+
+## 2. OCR de dorsal — entrenamiento real (de `train_jersey.log`)
+
+- Modelo base: **SmolVLM2** — 511.643.840 parámetros totales; **4.161.536 entrenables (0,81 %)** → ajuste fino tipo adaptadores (PEFT/LoRA), no full fine-tuning.
+- Dataset: **2.547 pares imagen-texto** de dorsal (carpeta `data/jersey-numbers` contiene 3.141 ficheros en total, imágenes + etiquetas).
+- **5 épocas**. Loss media por época:
+
+| Época | Loss media |
+|---|---|
+| 0 | 0,4502 |
+| 1 | 0,0267 |
+| 2 | 0,0171 |
+| 3 | 0,0125 |
+| 4 | 0,0101 |
+
+### Exactitud medida (evaluación real, 16 jun 2026)
+
+Evaluación sobre el split **test** (`scripts/eval_jersey_ocr.py`, réplica fiel de
+la inferencia de `pipeline/identity/number_ocr.py`):
+
+| Métrica | Valor |
+|---|---|
+| Muestras de test (dorsal numérico) | 312 |
+| Aciertos (coincidencia exacta) | 266 |
+| **Exactitud** | **85,26 %** |
+| Predicciones vacías | 0 |
+| Latencia media | 284 ms/imagen (A100) |
+| Throughput | 3,5 img/s |
+
+> El "96,8 %" de la plantilla era **inventado**: sustituir por **85,26 %**.
+> Patrón de errores típico: confusión 1↔2 dígitos y crops ocluidos
+> (p. ej. 40→10, 13→15, 34→24, "00"→"0"). 5 muestras del jsonl con `suffix`
+> vacío (prefijo UUID) se excluyen por estar mal exportadas.
+
+## 3. Líneas de código (para estimación de tamaño, cap. 5)
+
+| Componente | LoC |
+|---|---|
+| `pipeline/` (Python) | 5.112 |
+| └ court/ | 1.918 |
+| └ tracking/ | 666 |
+| └ scoring/ | 408 |
+| └ identity/ | 246 |
+| └ possession/ | 185 |
+| └ io/ | 172 |
+| └ teams/ | 164 |
+| └ detection/ | 69 |
+| `backend/` (Python) | 1.037 |
+| `scripts/` (Python) | 444 |
+| `run.py` | 61 |
+| `frontend/src/` (Vue/JS/CSS) | 4.513 |
+| **Total versionado (sin dist/node_modules)** | **~11.365** |
+
+## 4. Detector RF-DETR — 11 clases reales (`pipeline/config.py`)
+
+`basketball`(0), `ball`(1), `ball-in-basket`(2), `number`(3), `player`(4),
+`player-in-possession`(5), `player-jump-shot`(6), `player-layup-dunk`(7),
+`player-shot-block`(8), `referee`(9), `rim`(10).
+
+> Las clases 6–8 son **acciones detectadas por el propio detector** (no por
+> pose). El **shot tracker** (commit 65fb57e) detecta lanzamientos a partir de
+> estas clases + `ball-in-basket`. Por eso O5 (posesión + tiros) es real:
+> no usa ViTPose/ST-GCN. El "reconocimiento de acciones por pose" de la
+> plantilla nunca se implementó.
+
+## 5. Rendimiento del pipeline — medido (16 jun 2026)
+
+Ejecución real de `run.py` con profiling (`settings.profile=True`) sobre el clip
+`boston-celtics-new-york-knicks-game-1-q2-10.36-10.32.mp4` (**109 frames, 3,6 s,
+30 fps**) en **1× NVIDIA A100-40GB**. Tiempos GPU aproximados (`cuda_sync=False`).
+
+- **Total de procesamiento:** 152,8 s → **1.402 ms/frame ≈ 0,7 fps**.
+- **Tiempo de pared** (incluida carga de los 4 modelos): **3 min 7 s**.
+- Confirma que el sistema es de **procesado por lotes, no tiempo real** (refuerza
+  la eliminación de "tiempo real" del título/objetivos).
+
+**Desglose por etapa (% del cómputo):**
+
+| Etapa | ms/frame | % |
+|---|---|---|
+| Dorsal (OCR SmolVLM2) | 550,5 | 39,3 |
+| Tracking (SAM 3) | 424,4 | 30,3 |
+| Calibración de equipos (una vez) | 175,0 | 12,5 |
+| Equipos (SigLIP) | 101,5 | 7,2 |
+| Detección (RF-DETR) | 91,5 | 6,5 |
+| Cancha (keypoints + homografía) | 31,3 | 2,2 |
+| Escritura / render / proyección / decod. / posesión | <10 c/u | <2 |
+
+> Lecturas para el cap. 7: el **OCR (39 %)** y el **tracking SAM 3 (30 %)** son
+> los cuellos de botella; RF-DETR detecta rápido (91 ms/frame). Vía de mejora
+> evidente: cuantización/optimización del VLM y de SAM 3.
+
+**Salidas tácticas reales del mismo clip (validación funcional):**
+- Dorsales fijados: 10 tracks con número (p. ej. #7, #11, #23, #32…).
+- Posesión: Equipo 1 85,4 % / Equipo 0 14,6 % (89 frames con poseedor).
+- Tiros: 1/1 acierto detectado (aro derecho).
+
+### Consumo de VRAM y escalado multi-GPU (medido, 16 jun 2026)
+
+Medición real con `scripts/measure_performance.py` sobre el mismo clip (109
+frames) en A100-40GB. Resultados en [`perf-results.json`](perf-results.json).
+
+| Configuración | Tiempo de pared | VRAM pico | Speedup |
+|---|---|---|---|
+| **1× A100** | 187,0 s | **7.941 MiB (≈7,8 GB)** | 1,0× (base) |
+| **2× A100** (chunking) | 126,7 s | 5.839 / 6.015 MiB por GPU | **1,48×** |
+
+- **VRAM pico ≈ 7,8 GB** en 1 GPU → el pipeline (4 modelos: RF-DETR + SAM 3 +
+  SigLIP + SmolVLM2) **cabe holgadamente en una GPU de 8–12 GB**, no requiere la
+  A100 completa. Refuerza la narrativa de *hardware accesible* (cap. 1/2).
+- **Speedup 1,48× con 2 GPUs** (eficiencia 0,74), **sublineal**: cada trozo paga
+  el coste fijo de cargar los 4 modelos (~65 s), que no se reparte. Por Amdahl,
+  el speedup tiende a 2× cuanto **más largo** es el clip (el coste por-frame
+  domina sobre la carga fija). Con 109 frames el coste de carga pesa demasiado.
+  Vía de mejora: reutilizar workers/modelos entre trozos en lugar de relanzar el
+  subproceso por chunk.
+
+> Reproducible con: `python scripts/measure_performance.py --clip <clip> --gpus 0,1`.
+
+## 6. Componentes NO implementados (mantener fuera del cuerpo, solo en Vías futuras)
+
+- **Motor experto / reglas tácticas**: `backend/app/core/expert/{engine,rules}.py` → **0 líneas** (commit WEB-B5 `7d9edf5` añadió ficheros vacíos).
+- **Clasificador GNN de jugadas**: `backend/app/core/classifier/{model,graph_builder,inference}.py` → **0 líneas**.
+- **Reconocimiento de acciones por pose** (ViTPose/ST-GCN/PoseConv3D): no existe.
+- Todo `backend/app/core/` = 0 líneas (andamiaje). La lógica real del backend está en `backend/app/main.py` + `chunking.py`.
+
+> ⚠️ No afirmar en la memoria que el GNN o el motor experto están implementados.
+> El commit WEB-B5 los "añade" pero son ficheros vacíos.
