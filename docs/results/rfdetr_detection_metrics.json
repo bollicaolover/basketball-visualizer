@@ -1,0 +1,127 @@
+{
+  "project": "tfg-junio",
+  "detector": "pipeline/detection/rfdetr_detector.py",
+  "weights": "/home/gdfraile/tfg/tfg-junio/models/detection/checkpoint_best_ema.pth",
+  "dataset": "basketball-player-detection (test split)",
+  "resolution": 672,
+  "production_score_threshold": 0.4,
+  "possession_class5_score_threshold": 0.55,
+  "iou_threshold": 0.5,
+  "conf_threshold_greedy": 0.55,
+  "mAP50": 0.8472,
+  "mAP50_95": 0.5946,
+  "latency_ms_per_frame": 57.07,
+  "fps_detector": 17.5,
+  "per_class": {
+    "basketball": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_gt": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "ap50": 0.0
+    },
+    "ball": {
+      "precision": 0.971,
+      "recall": 0.7614,
+      "f1": 0.8535,
+      "support_gt": 88,
+      "tp": 67,
+      "fp": 2,
+      "fn": 21,
+      "ap50": 0.8549
+    },
+    "ball-in-basket": {
+      "precision": 1.0,
+      "recall": 0.125,
+      "f1": 0.2222,
+      "support_gt": 8,
+      "tp": 1,
+      "fp": 0,
+      "fn": 7,
+      "ap50": 0.5785
+    },
+    "number": {
+      "precision": 0.9456,
+      "recall": 0.7972,
+      "f1": 0.8651,
+      "support_gt": 567,
+      "tp": 452,
+      "fp": 26,
+      "fn": 115,
+      "ap50": 0.8798
+    },
+    "player": {
+      "precision": 0.9714,
+      "recall": 0.9487,
+      "f1": 0.9599,
+      "support_gt": 896,
+      "tp": 850,
+      "fp": 25,
+      "fn": 46,
+      "ap50": 0.9796
+    },
+    "player-in-possession": {
+      "precision": 1.0,
+      "recall": 0.3333,
+      "f1": 0.5,
+      "support_gt": 18,
+      "tp": 6,
+      "fp": 0,
+      "fn": 12,
+      "ap50": 0.5996
+    },
+    "player-jump-shot": {
+      "precision": 0.9231,
+      "recall": 0.75,
+      "f1": 0.8276,
+      "support_gt": 16,
+      "tp": 12,
+      "fp": 1,
+      "fn": 4,
+      "ap50": 0.9074
+    },
+    "player-layup-dunk": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_gt": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "ap50": 0.0
+    },
+    "player-shot-block": {
+      "precision": 0.9,
+      "recall": 0.6429,
+      "f1": 0.75,
+      "support_gt": 14,
+      "tp": 9,
+      "fp": 1,
+      "fn": 5,
+      "ap50": 0.8444
+    },
+    "referee": {
+      "precision": 0.9333,
+      "recall": 0.95,
+      "f1": 0.9416,
+      "support_gt": 280,
+      "tp": 266,
+      "fp": 19,
+      "fn": 14,
+      "ap50": 0.9806
+    },
+    "rim": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support_gt": 93,
+      "tp": 93,
+      "fp": 0,
+      "fn": 0,
+      "ap50": 1.0
+    }
+  }
+}
