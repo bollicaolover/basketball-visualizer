@@ -38,6 +38,11 @@
 
 `basketball-visualizer` toma un clip de baloncesto y produce **dos vídeos**: el original anotado (cajas, equipos, dorsales y nombres) y un **mapa cenital 2D** con las posiciones de los jugadores y el balón proyectadas sobre el plano de la cancha. Opcionalmente añade **reconstrucción 3D de la trayectoria del tiro** y **reconocimiento de pantallas** (*screens*) en post-proceso.
 
+<div align="center">
+  <img src="docs/fig_deteccion_jugadores_arbitro_balon.jpg" alt="Detección de jugadores, árbitro y balón con identidad de equipo y dorsal" width="85%">
+  <br><sub>Detección e identidad: jugadores por equipo, árbitro, balón y poseedor.</sub>
+</div>
+
 Combina el flujo de detección/identidad con la proyección 2D y el tracking de balón, **usando modelos propios entrenados o enlazados en local** (sin inferencia alojada). El bloque analítico se apoya en literatura del dominio: el tracking y la 3D del balón siguen el método de **Pirotta**, el reconocimiento de pantallas el de **Chen et al. (2012)**, y la calibración robusta de cancha integra **KaliCalib**.
 
 El proyecto se distribuye de dos formas:
@@ -171,6 +176,11 @@ python run.py data/clip.mp4 -o data/out.mp4 --metadata --tactics
 - **3D del tiro** (`pipeline/shot3d/`, `pipeline/court/ball_3d.py`): resuelve la parábola balística 3D a partir de las detecciones 2D del balón y la matriz de proyección de cámara por frame (DLT 2N×6, método de **Pirotta** cap. 5.2). La **suelta por pose** siembra la 3D con el frame real de release usando YOLOv8-pose sobre el recorte del poseedor.
 - **Pantallas** (`pipeline/tactics/`): detecta el bloqueo (contacto *screener* ↔ defensor con el defensor "entre" los dos atacantes) y lo clasifica en front / back / down por ángulos y aproximación al aro, siguiendo a **Chen et al. (2012)**.
 
+<div align="center">
+  <img src="docs/results/shot3d.png" alt="Reconstrucción 3D de la trayectoria del tiro" width="92%">
+  <br><sub>Reconstrucción 3D del tiro: trayectoria balística, suelta, ángulo de salida y ápice.</sub>
+</div>
+
 ## Aplicación web
 
 Compila el frontend y arranca el backend FastAPI (que sirve los estáticos compilados):
@@ -259,6 +269,11 @@ basketball-visualizer/
 ## Metodología
 
 Desarrollado con **Kanban** (WIP = 1, una tarjeta por commit) sobre las fases de **CRISP-DM**, con trazabilidad tarjeta ↔ commit. El avance se documenta con un *Cumulative Flow Diagram* y un diagrama de progreso por áreas (`docs/cfd*.svg`, `docs/progreso.svg`). Detalle en [`docs/metodologia.md`](docs/metodologia.md).
+
+<div align="center">
+  <img src="docs/cfd.svg" alt="Cumulative Flow Diagram del proyecto (Kanban)" width="88%">
+  <br><sub>Cumulative Flow Diagram: 51/55 tareas completadas (Ene–Jun 2026), WIP = 1.</sub>
+</div>
 
 ## Documentación
 
