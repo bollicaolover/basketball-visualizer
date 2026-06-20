@@ -446,9 +446,14 @@ class Pipeline:
             in_possession = self._filter_confidence(
                 in_possession, self.settings.possession.class5_score_threshold,
             )
+            # Velocidad y flag de extrapolación del balón (P1): el tracker los
+            # expone; con backends sin esta interfaz se degrada a (None, False).
+            ball_velocity = getattr(self.ball_tracker, "last_velocity", lambda: None)()
+            ball_predicted = getattr(self.ball_tracker, "last_predicted", lambda: False)()
             ctx.possessor_track_id = self.possession.update(
                 ctx.ball_detections, ctx.tracked_entities, in_possession,
                 hoop_detections=ctx.hoop_detections,
+                ball_velocity=ball_velocity, ball_predicted=ball_predicted,
             )
 
             # 6.55. Suelta por pose (opt-in): muñecas del poseedor + balón.

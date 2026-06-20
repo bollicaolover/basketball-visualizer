@@ -25,12 +25,24 @@ class BallTracker:
         self._center: Optional[np.ndarray] = None
         self._confidence: float = 0.0
         self._frames_missing: int = 0
+        # Velocidad (px/frame) y flag de extrapolación, para el resolutor de
+        # posesión (P1). Misma interfaz que ``KalmanBallTracker``.
+        self._velocity: Optional[np.ndarray] = None
+        self._predicted: bool = False
 
     def reset(self) -> None:
         self._box = None
         self._center = None
         self._confidence = 0.0
         self._frames_missing = 0
+        self._velocity = None
+        self._predicted = False
+
+    def last_predicted(self) -> bool:
+        return self._predicted
+
+    def last_velocity(self) -> Optional[np.ndarray]:
+        return None if self._velocity is None else self._velocity.copy()
 
     @staticmethod
     def _center_from_box(box: np.ndarray) -> np.ndarray:
@@ -111,6 +123,7 @@ class BallTracker:
         if self._s.simple:
             return self._update_simple(detections)
 
+        self._predicted = False
         pick = self._pick_detection(detections)
 
         if pick is None:
@@ -120,6 +133,7 @@ class BallTracker:
                 or self._frames_missing > self._s.holdover_frames
             ):
                 return sv.Detections.empty()
+            self._predicted = True  # holdover: caja conservada, sin detección
             return self._as_detections()
 
         box = detections.xyxy[pick].astype(np.float32)
@@ -138,6 +152,7 @@ class BallTracker:
                     self._box = None
                     self._center = None
                     return sv.Detections.empty()
+                self._predicted = True  # salto descartado: se conserva la caja
                 return self._as_detections()
 
             a = self._s.ema_alpha
@@ -153,6 +168,7 @@ class BallTracker:
                 ],
                 dtype=np.float32,
             )
+            self._velocity = (smooth_center - self._center).astype(np.float32)
             self._center = smooth_center
         else:
             self._center = center.copy()
@@ -169,7 +185,11 @@ class BallTracker:
             return sv.Detections.empty()
         box = detections.xyxy[pick].astype(np.float32)
         self._box = box
-        self._center = self._center_from_box(box)
+        new_center = self._center_from_box(box)
+        if self._center is not None:
+            self._velocity = (new_center - self._center).astype(np.float32)
+        self._center = new_center
+        self._predicted = False
         self._confidence = float(
             detections.confidence[pick]
             if detections.confidence is not None

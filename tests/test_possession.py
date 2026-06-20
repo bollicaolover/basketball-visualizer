@@ -120,3 +120,101 @@ def test_reset_limpia_el_estado():
     r.update(_ball(25, 100), players)
     r.reset()
     assert r.possession_frames() == {}
+
+
+# ---------------------------------------------------------------------------
+# P1(a) — balón extrapolado (oclusión): no se crea poseedor nuevo
+# ---------------------------------------------------------------------------
+def test_predicted_ball_no_crea_poseedor_nuevo():
+    s = PossessionSettings(switch_frames=1)
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200]), _player(2, [300, 0, 350, 200])]
+
+    # El jugador 1 es el poseedor con balón real.
+    r.update(_ball(25, 100), players)
+    assert r._possessor == 1
+
+    # El tracker arrastra (extrapola) el balón hasta el jugador 2 durante una
+    # oclusión: con ``ball_predicted`` NO debe robarle la posesión al 1.
+    out = r.update(_ball(325, 100), players, ball_predicted=True)
+    assert out == 1
+
+
+def test_predicted_ball_mantiene_al_poseedor_actual_si_sigue_cerca():
+    s = PossessionSettings(switch_frames=1, loose_frames=2)
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200])]
+    r.update(_ball(25, 100), players)
+    # Balón extrapolado pero aún sobre el jugador 1 → se conserva, no se suelta.
+    assert r.update(_ball(25, 100), players, ball_predicted=True) == 1
+
+
+# ---------------------------------------------------------------------------
+# P1(b) — balón en vuelo (rápido): no asigna posesión por proximidad
+# ---------------------------------------------------------------------------
+def test_balon_en_vuelo_no_asigna_por_proximidad():
+    s = PossessionSettings(switch_frames=1, inflight_speed_heights=0.5)
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200])]  # altura 200 px
+    ball = _ball(25, 100)                    # dentro del bbox
+    # Velocidad 150 px/frame → 150/200 = 0.75 > 0.5 → en vuelo → sin poseedor.
+    fast = np.array([150.0, 0.0], dtype=np.float32)
+    assert r.update(ball, players, ball_velocity=fast) is None
+    # La misma posición a velocidad baja sí asigna posesión.
+    slow = np.array([10.0, 0.0], dtype=np.float32)
+    assert r.update(ball, players, ball_velocity=slow) == 1
+
+
+# ---------------------------------------------------------------------------
+# P2 — clase 5 vale sola cuando no hay balón real (recorte/fuera de cuadro)
+# ---------------------------------------------------------------------------
+def test_clase5_sin_balon_real_se_acepta_sola():
+    s = PossessionSettings(
+        switch_frames=1, class5_iou=0.3,
+        class5_requires_ball=True, class5_standalone_when_ball_missing=True,
+    )
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200]), _player(2, [300, 0, 350, 200])]
+    class5 = sv.Detections(xyxy=np.array([[300, 0, 350, 200]], dtype=np.float32))
+    # Sin caja de balón: la clase 5 (jugador 2) manda por sí sola.
+    assert r.update(None, players, class5) == 2
+
+
+def test_clase5_balon_extrapolado_se_acepta_sola():
+    s = PossessionSettings(
+        switch_frames=1, class5_iou=0.3,
+        class5_requires_ball=True, class5_standalone_when_ball_missing=True,
+    )
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200]), _player(2, [300, 0, 350, 200])]
+    ball = _ball(25, 100)  # caja del balón lejos del jugador 2...
+    class5 = sv.Detections(xyxy=np.array([[300, 0, 350, 200]], dtype=np.float32))
+    # ...pero está extrapolada (no real) → no se exige "balón cerca" → gana clase 5.
+    assert r.update(ball, players, class5, ball_predicted=True) == 2
+
+
+def test_clase5_standalone_desactivado_recupera_comportamiento_estricto():
+    s = PossessionSettings(
+        switch_frames=1, class5_iou=0.3,
+        class5_requires_ball=True, class5_standalone_when_ball_missing=False,
+    )
+    r = PossessionResolver(s)
+    players = [_player(1, [0, 0, 50, 200]), _player(2, [300, 0, 350, 200])]
+    class5 = sv.Detections(xyxy=np.array([[300, 0, 350, 200]], dtype=np.float32))
+    # Sin balón y sin modo standalone → clase 5 rechazada → sin poseedor.
+    assert r.update(None, players, class5) is None
+
+
+# ---------------------------------------------------------------------------
+# P3 — desempate de proximidad: pegajosidad del poseedor en multitudes
+# ---------------------------------------------------------------------------
+def test_empate_proximidad_mantiene_al_poseedor_actual():
+    s = PossessionSettings(switch_frames=1, tie_margin_heights=0.1)
+    r = PossessionResolver(s)
+    # Dos jugadores solapados; el balón equidista de ambos bordes.
+    players = [_player(1, [0, 0, 100, 200]), _player(2, [100, 0, 200, 200])]
+    # Frame 1: balón pegado al jugador 1 → poseedor 1.
+    assert r.update(_ball(20, 100), players) == 1
+    # Frame 2: balón justo en la frontera (empate de bordes). Sin pegajosidad el
+    # nearest podría saltar al 2; con P3 el poseedor actual gana el empate.
+    assert r.update(_ball(100, 100), players) == 1

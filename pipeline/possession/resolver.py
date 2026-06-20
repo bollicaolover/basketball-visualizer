@@ -26,7 +26,7 @@ al empezar un vídeo nuevo.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import supervision as sv
@@ -45,6 +45,9 @@ class PossessionResolver:
         self._loose_count: int = 0
         # Frames de posesión acumulados por track (para el resumen de % posesión).
         self._frames_by_track: Dict[int, int] = {}
+        # Centros de bbox del frame anterior, por track, para estimar la velocidad
+        # de cada jugador en el desempate por movimiento (P3).
+        self._prev_centers: Dict[int, np.ndarray] = {}
 
     def reset(self) -> None:
         self._possessor = None
@@ -53,6 +56,7 @@ class PossessionResolver:
         self._pending_count = 0
         self._loose_count = 0
         self._frames_by_track.clear()
+        self._prev_centers.clear()
 
     # ------------------------------------------------------------------
     def update(
@@ -61,20 +65,30 @@ class PossessionResolver:
         entities: List[TrackedEntity],
         in_possession_detections: Optional[sv.Detections] = None,
         hoop_detections: Optional[sv.Detections] = None,
+        ball_velocity: Optional[np.ndarray] = None,
+        ball_predicted: bool = False,
     ) -> Optional[int]:
-        """Devuelve el ``track_id`` poseedor de este frame (o ``None``)."""
+        """Devuelve el ``track_id`` poseedor de este frame (o ``None``).
+
+        ``ball_velocity`` (px/frame) y ``ball_predicted`` (la caja del balón es
+        una extrapolación de Kalman, no una detección real) provienen del tracker
+        del balón y alimentan las salvaguardas P1 (vuelo/oclusión). Ambos son
+        opcionales: sin ellos, el comportamiento es el clásico por proximidad.
+        """
         if not self._s.enabled or not entities:
             self._register_none()
             return self._possessor
 
         candidate = self._frame_candidate(
             ball_detections, entities, in_possession_detections, hoop_detections,
+            ball_velocity, ball_predicted,
         )
         self._advance_state(candidate)
         if self._possessor is not None:
             self._frames_by_track[self._possessor] = (
                 self._frames_by_track.get(self._possessor, 0) + 1
             )
+        self._update_prev_centers(entities)
         return self._possessor
 
     def possession_frames(self) -> Dict[int, int]:
@@ -88,16 +102,25 @@ class PossessionResolver:
         entities: List[TrackedEntity],
         in_possession_detections: Optional[sv.Detections],
         hoop_detections: Optional[sv.Detections] = None,
+        ball_velocity: Optional[np.ndarray] = None,
+        ball_predicted: bool = False,
     ) -> Optional[int]:
+        # "Balón real" = hay caja y no es una mera extrapolación de Kalman. Las
+        # señales que dependen de la posición del balón solo se fían de ella en
+        # ese caso (P1/P2).
+        ball_real = self._ball_center(ball_detections) is not None and not ball_predicted
+
         # (1) Señal primaria: clase 5 asociada por IoU al track.
         class5 = self._class5_candidate(
-            ball_detections, in_possession_detections, entities,
+            ball_detections, in_possession_detections, entities, ball_real,
         )
         if class5 is not None:
             return class5
 
         # (2) Señal secundaria: proximidad balón→jugador en imagen.
-        return self._proximity_candidate(ball_detections, entities, hoop_detections)
+        return self._proximity_candidate(
+            ball_detections, entities, hoop_detections, ball_velocity, ball_predicted,
+        )
 
     def _ball_near_rim(
         self,
@@ -161,6 +184,7 @@ class PossessionResolver:
         ball_detections: Optional[sv.Detections],
         in_possession_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
+        ball_real: bool = True,
     ) -> Optional[int]:
         if in_possession_detections is None or len(in_possession_detections) == 0:
             return None
@@ -171,7 +195,12 @@ class PossessionResolver:
             return None
         best_player_idx, _ = np.unravel_index(int(np.argmax(iou)), iou.shape)
         entity = entities[best_player_idx]
-        if self._s.class5_requires_ball and not self._ball_near_entity(
+        # La verificación "balón cerca" solo se exige con un balón real (P2): si la
+        # caja del balón falta o está extrapolada, la clase 5 se acepta sola.
+        needs_ball_check = self._s.class5_requires_ball and (
+            ball_real or not self._s.class5_standalone_when_ball_missing
+        )
+        if needs_ball_check and not self._ball_near_entity(
             ball_detections, entity, self._s.class5_max_ball_distance_heights,
         ):
             return None
@@ -182,6 +211,8 @@ class PossessionResolver:
         ball_detections: Optional[sv.Detections],
         entities: List[TrackedEntity],
         hoop_detections: Optional[sv.Detections] = None,
+        ball_velocity: Optional[np.ndarray] = None,
+        ball_predicted: bool = False,
     ) -> Optional[int]:
         ball_c = self._ball_center(ball_detections)
         if ball_c is None:
@@ -189,8 +220,13 @@ class PossessionResolver:
         if self._ball_near_rim(ball_c, hoop_detections):
             return None
 
-        best_tid: Optional[int] = None
-        best_score = np.inf
+        speed = (
+            float(np.hypot(ball_velocity[0], ball_velocity[1]))
+            if ball_velocity is not None else 0.0
+        )
+
+        # Candidatos bajo umbral: (track_id, score, centro_bbox).
+        cands: List[Tuple[int, float, np.ndarray]] = []
         for e in entities:
             edge_norm = self._ball_edge_distance_heights(ball_c, e.bbox_xyxy)
             if edge_norm > self._s.max_ball_distance_heights:
@@ -199,12 +235,87 @@ class PossessionResolver:
             cx = (x1 + x2) / 2.0
             cy = (y1 + y2) / 2.0
             height = max(float(y2 - y1), 1.0)
+            # P1(b): un balón rápido respecto a la escala del jugador va de
+            # pase/tiro (en vuelo), no en mano → no asigna posesión por proximidad.
+            if (
+                self._s.inflight_speed_heights > 0.0
+                and speed / height > self._s.inflight_speed_heights
+            ):
+                continue
             center_norm = float(np.hypot(ball_c[0] - cx, ball_c[1] - cy)) / height
             score = edge_norm + 1e-3 * center_norm
-            if score < best_score:
-                best_score = score
-                best_tid = int(e.track_id)
+            cands.append((int(e.track_id), score, np.array([cx, cy], dtype=np.float32)))
+
+        if not cands:
+            return None
+
+        # P1(a): con balón extrapolado no se crea poseedor nuevo; solo se refresca
+        # al actual si sigue siendo un candidato plausible.
+        if ball_predicted and self._s.ignore_predicted_ball:
+            return self._possessor if any(
+                tid == self._possessor for tid, _, _ in cands
+            ) else None
+
+        cands.sort(key=lambda c: c[1])
+        best_tid = cands[0][0]
+        # P3: ante un empate de proximidad (multitud/forcejeo) desempata por
+        # pegajosidad del poseedor y, en su defecto, por coincidencia de movimiento.
+        if len(cands) >= 2 and (cands[1][1] - cands[0][1]) <= self._s.tie_margin_heights:
+            best_tid = self._break_tie(cands, ball_velocity)
         return best_tid
+
+    def _break_tie(
+        self,
+        cands: List[Tuple[int, float, np.ndarray]],
+        ball_velocity: Optional[np.ndarray],
+    ) -> int:
+        """Desempata entre los candidatos a una distancia ``tie_margin_heights``
+        del mejor: (a) poseedor actual, (b) último poseedor, (c) el que mejor
+        acompaña al balón, (d) el más cercano."""
+        best_score = cands[0][1]
+        tied = [c for c in cands if c[1] - best_score <= self._s.tie_margin_heights]
+        tied_ids = {tid for tid, _, _ in tied}
+        # (a)/(b) Pegajosidad: el balón "no cambia de manos" por un empate de píxeles.
+        if self._possessor in tied_ids:
+            return self._possessor
+        if self._last_possessor in tied_ids:
+            return self._last_possessor
+        # (c) Coincidencia de movimiento: el balón en mano viaja con su jugador.
+        if (
+            self._s.tie_break_use_motion
+            and ball_velocity is not None
+            and float(np.hypot(ball_velocity[0], ball_velocity[1])) > 1e-3
+        ):
+            best_tid: Optional[int] = None
+            best_align = -np.inf
+            for tid, _, center in tied:
+                pv = self._track_velocity(tid, center)
+                if pv is None:
+                    continue
+                align = float(np.dot(pv, ball_velocity))  # mayor = más alineado con el balón
+                if align > best_align:
+                    best_align = align
+                    best_tid = tid
+            if best_tid is not None:
+                return best_tid
+        # (d) Por defecto, el más cercano (ya es ``tied[0]`` por el orden previo).
+        return tied[0][0]
+
+    def _track_velocity(
+        self, track_id: int, center: np.ndarray,
+    ) -> Optional[np.ndarray]:
+        prev = self._prev_centers.get(track_id)
+        return None if prev is None else (center - prev)
+
+    def _update_prev_centers(self, entities: List[TrackedEntity]) -> None:
+        self._prev_centers = {
+            int(e.track_id): np.array(
+                [(e.bbox_xyxy[0] + e.bbox_xyxy[2]) / 2.0,
+                 (e.bbox_xyxy[1] + e.bbox_xyxy[3]) / 2.0],
+                dtype=np.float32,
+            )
+            for e in entities
+        }
 
     # ------------------------------------------------------------------
     def _advance_state(self, candidate: Optional[int]) -> None:
