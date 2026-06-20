@@ -1,0 +1,36 @@
+{
+  "clip": "boston-celtics-new-york-knicks-game-1-q2-10.36-10.32.mp4",
+  "frames": 109,
+  "fps": 30.0,
+  "gpu_name": "NVIDIA A100-SXM4-40GB",
+  "single": {
+    "wall_s": 186.99,
+    "vram_peak_mib": 7941,
+    "gpu": 0
+  },
+  "multi": {
+    "n_gpus": 2,
+    "wall_s": 126.72,
+    "vram_peak_mib": {
+      "0": 5839,
+      "1": 6015
+    },
+    "per_chunk_wall_s": {
+      "0": 120.33,
+      "1": 126.72
+    },
+    "frames": 109,
+    "ranges": [
+      [
+        0,
+        55
+      ],
+      [
+        55,
+        54
+      ]
+    ]
+  },
+  "speedup": 1.48,
+  "efficiency": 0.738
+}
