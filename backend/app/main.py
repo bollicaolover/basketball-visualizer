@@ -6,6 +6,7 @@ Endpoints:
     GET  /api/system/stats        — CPU y GPU en tiempo real
     GET  /api/outputs/{job_id}/overlay.mp4    — Vídeo anotado (streaming)
     GET  /api/outputs/{job_id}/metadata.json  — Metadatos tácticos por frame
+    GET  /api/outputs/{job_id}/tactics.json   — Pantallas (screens) reconocidas
     POST /api/outputs/{job_id}/annotations    — Guarda anotaciones del usuario
     GET  /api/outputs/{job_id}/annotations    — Lee anotaciones guardadas
 
@@ -261,6 +262,24 @@ def _run_worker(
     return proc.returncode, "".join(stderr_lines)[-3000:]
 
 
+def _generate_tactics(out_dir: Path) -> None:
+    """Reconoce pantallas (Chen et al. 2012) sobre el metadata final ya fusionado.
+
+    Post-proceso CPU barato sobre ``overlay_metadata.json``; se ejecuta aquí (no
+    en los workers por chunk) para operar sobre las trayectorias completas. No es
+    crítico: si falla, el resto del análisis sigue válido.
+    """
+    meta = out_dir / "overlay_metadata.json"
+    if not meta.exists():
+        return
+    try:
+        from pipeline.tactics.run import run_tactics
+
+        run_tactics(meta, json_out=out_dir / "tactics.json")
+    except Exception as exc:  # noqa: BLE001
+        print(f"[WARN] tácticas no generadas: {exc}", flush=True)
+
+
 def _done_job_payload(job_id: str) -> dict:
     out_dir = DATA_OUTPUTS / job_id
     payload = {
@@ -277,6 +296,8 @@ def _done_job_payload(job_id: str) -> dict:
         payload["shot3d_url"] = f"/api/outputs/{job_id}/shot3d.mp4"
     if (out_dir / "shot3d.json").exists():
         payload["shot3d_json_url"] = f"/api/outputs/{job_id}/shot3d.json"
+    if (out_dir / "tactics.json").exists():
+        payload["tactics_url"] = f"/api/outputs/{job_id}/tactics.json"
     return payload
 
 
@@ -331,6 +352,7 @@ def _run_single(
     except Exception as exc:  # noqa: BLE001
         print(f"[WARN] vídeo limpio no generado: {exc}", flush=True)
 
+    _generate_tactics(overlay_path.parent)
     _write_job(job_id, _done_job_payload(job_id))
 
 
@@ -425,6 +447,7 @@ def _run_chunked(
     except Exception as exc:  # noqa: BLE001
         print(f"[WARN] vídeo limpio no generado: {exc}", flush=True)
 
+    _generate_tactics(output_dir)
     _write_job(job_id, _done_job_payload(job_id))
 
 
@@ -886,6 +909,18 @@ async def get_metadata(job_id: str):
     path = DATA_OUTPUTS / job_id / "overlay_metadata.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Metadatos no encontrados")
+    return FileResponse(str(path), media_type="application/json")
+
+
+@app.get("/api/outputs/{job_id}/tactics.json")
+async def get_tactics(job_id: str):
+    """Pantallas (screens) reconocidas: front/back/down sobre trayectorias."""
+    job = _read_job(job_id)
+    if job.get("status") != "done":
+        raise HTTPException(status_code=202, detail="Las tácticas aún no están listas")
+    path = DATA_OUTPUTS / job_id / "tactics.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sin tácticas para este análisis")
     return FileResponse(str(path), media_type="application/json")
 
 
