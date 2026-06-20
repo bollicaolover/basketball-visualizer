@@ -202,6 +202,22 @@ class PossessionSettings:
     # Margen en píxeles que se añade al bbox del jugador antes de medir
     # distancia al balón (absorbe imprecisión de SAM en los bordes del bbox).
     bbox_margin_px: float = 15.0
+    # P1(a): con el balón solo extrapolado por Kalman (oclusión), no asignar un
+    # poseedor NUEVO por proximidad desde una caja "alucinada"; solo refrescar al
+    # poseedor actual. Evita robos fantasma cuando el balón está oculto tras un
+    # cuerpo y el tracker lo arrastra hacia otro jugador.
+    ignore_predicted_ball: bool = True
+    # P1(b): velocidad del balón (en alturas-de-bbox por frame) por encima de la
+    # cual se considera "en vuelo" (pase/tiro) y NO se asigna posesión por
+    # proximidad. <=0 desactiva. Más bajo = suprime más agresivamente.
+    inflight_speed_heights: float = 0.5
+    # P3: dos candidatos de proximidad cuyas puntuaciones (distancia normalizada)
+    # difieren menos que esto se consideran empatados; el desempate prioriza al
+    # poseedor actual/último (pegajosidad anti-flicker en multitudes/forcejeos).
+    tie_margin_heights: float = 0.05
+    # P3: si no hay poseedor actual/último entre los empatados, desempatar por
+    # coincidencia de movimiento (el balón en mano viaja con su jugador).
+    tie_break_use_motion: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +487,50 @@ class Shot3DSettings:
     write_json: bool = True
 
 
+@dataclass
+class TacticsSettings:
+    """Reconocimiento de pantallas (Chen et al. 2012, §4.2 y §5).
+
+    Opera en post-proceso sobre las trayectorias en pies de
+    ``{out}_metadata.json``. Ver ``docs/tacticas-screen-recognition.md`` para la
+    correspondencia con los símbolos del artículo (``ds``, ``Ds``, ``θs``).
+    """
+
+    enabled: bool = False
+    # ``ds``: contacto screener↔defensor y "dos atacantes anormalmente juntos".
+    contact_dist_ft: float = 4.0
+    # ``Ds``: umbral superior del par de atacantes (más allá se considera
+    # espacio abierto normal, no un bloqueo). El bloqueo se *fija* en contacto
+    # (~3-6 ft); 12 ft admitía espaciado ofensivo ordinario como candidato y
+    # disparaba falsos positivos, así que se baja a 8 ft.
+    near_dist_ft: float = 8.0
+    # Semi-anchura (ft) del corredor screener↔screenee dentro del que debe caer
+    # el defensor para validar el bloqueo: implementa la condición en prosa de
+    # §5.1 ("al menos un defensor ENTRE los dos atacantes"), que el Algoritmo 2
+    # relaja a simple proximidad. Sin "estar entre", cualquier pareja cercana con
+    # un defensor al lado dispara un screen: es la causa principal de FP.
+    defender_lane_halfwidth_ft: float = 4.0
+    # ``θs``: ángulo que separa back-screen (screenee corta al aro) de
+    # front-screen (screenee sale a espacio abierto).
+    back_front_angle_deg: float = 60.0
+    # Acercamiento mínimo del screener al aro (ft) para clasificar down-screen.
+    # El test estricto |p_basket−p_init| > |p_basket−p_screen| convertía cualquier
+    # deriva ínfima hacia el aro en down (caso fallido Fig. 18a); se exige margen.
+    down_approach_margin_ft: float = 3.0
+    # Frames mínimos de detección continua para confirmar un evento (anti-ruido).
+    min_event_frames: int = 3
+    # Huecos tolerados dentro de un mismo evento (oclusión/dropout de tracking).
+    max_gap_frames: int = 5
+    # Lead-in: frames antes del primer contacto desde los que se toma ``p_init``
+    # (el screener aproximándose). Sin esto ``p_init ≈ p_screen`` y el down-screen
+    # nunca dispararía (Ec. 9).
+    lead_in_frames: int = 8
+    # Lag-out: frames tras el último contacto desde los que se toma ``p_last``
+    # (el screenee completando su corte tras el bloqueo).
+    lag_out_frames: int = 8
+    write_json: bool = True
+
+
 # ---------------------------------------------------------------------------
 # Settings global
 # ---------------------------------------------------------------------------
@@ -492,6 +552,7 @@ class Settings:
     sam: SAMSettings = field(default_factory=SAMSettings)
     render: RenderSettings = field(default_factory=RenderSettings)
     shot3d: Shot3DSettings = field(default_factory=Shot3DSettings)
+    tactics: TacticsSettings = field(default_factory=TacticsSettings)
 
     write_overlay_video: bool = True
     write_map_video: bool = True

@@ -226,6 +226,28 @@ class Pipeline:
         if self.settings.shot3d.enabled and self.settings.write_metadata:
             self._run_shot3d(input_path, output_path)
 
+        if self.settings.tactics.enabled and self.settings.write_metadata:
+            self._run_tactics(output_path)
+
+    def _run_tactics(self, output_path: str) -> None:
+        """Reconoce pantallas (Chen et al. 2012) sobre el metadata ya escrito."""
+        from pathlib import Path
+
+        from pipeline.tactics.run import run_tactics, tactics_output_path
+
+        meta_path = Path(_metadata_output_path(output_path))
+        if not meta_path.is_file():
+            print("[WARN] tácticas omitidas: no hay metadata", flush=True)
+            return
+        json_out = tactics_output_path(meta_path) if self.settings.tactics.write_json else None
+        print("[STAGE] tactics", flush=True)
+        with self.timer.stage("tactics"):
+            doc = run_tactics(meta_path, json_out=json_out, settings=self.settings.tactics)
+        counts = doc.get("screen_counts", {})
+        total = sum(counts.values())
+        detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items())) or "ninguna"
+        print(f"[RESUMEN] pantallas: {total} ({detail})", flush=True)
+
     def _run_shot3d(self, input_path: str, output_path: str) -> None:
         from pathlib import Path
 
