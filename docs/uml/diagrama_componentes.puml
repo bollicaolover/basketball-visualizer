@@ -1,0 +1,81 @@
+@startuml diagrama_componentes
+'======================================================================
+'  TFG - Análisis Táctico de Baloncesto
+'  Diagrama de Componentes (UML 2.x)
+'======================================================================
+title Diagrama de Componentes — Arquitectura del sistema
+
+skinparam dpi 130
+skinparam shadowing false
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+}
+skinparam node {
+  BackgroundColor #F4F6F7
+  BorderColor #34495E
+}
+skinparam interface {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+}
+
+' --------------------------------------------------------------------
+'  Interfaces (lollipop / socket)
+' --------------------------------------------------------------------
+interface "UI"            as IUI
+interface "REST API"      as IREST
+interface "ProcessingAPI" as IPROC
+interface "StorageAPI"    as ISTORE
+
+' --------------------------------------------------------------------
+'  Nodo cliente
+' --------------------------------------------------------------------
+node "Cliente (Navegador)" <<device>> {
+  component "Frontend\n(Vue 3 + Vite)" <<component>> as Frontend
+  Frontend -up- IUI
+}
+
+' --------------------------------------------------------------------
+'  Nodo servidor
+' --------------------------------------------------------------------
+node "Servidor (2x NVIDIA A100)" <<device>> {
+
+  component "Backend API\n(FastAPI)" <<component>> as Backend
+
+  component "CV Pipeline" <<component>> as Pipeline {
+    component "VideoProcessor"            <<component>> as VideoProcessor
+    component "Detector\n(RF-DETR)"       <<component>> as Detector
+    component "Tracker\n(SAM3 / BoT-SORT)"<<component>> as Tracker
+    component "HomographyModule"          <<component>> as Homography
+    component "TacticAnalyzer"            <<component>> as Tactic {
+      component "ScreenDetector"     <<component>> as Screen
+      component "PossessionDetector" <<component>> as Possession
+    }
+    VideoProcessor --> Detector
+    VideoProcessor --> Tracker
+    VideoProcessor --> Homography
+    VideoProcessor --> Tactic
+  }
+
+  component "Storage" <<component>> as Storage {
+    component "FileSystem\n(vídeos, salidas procesadas)" <<artifact>> as FS
+    component "Database\n(jugadas, metadatos, rosters)"  <<artifact>> as Database
+  }
+}
+
+' --------------------------------------------------------------------
+'  Conectores de ensamblaje (provisto = lollipop, requerido = socket)
+' --------------------------------------------------------------------
+Backend  -up- IREST            : provee
+Frontend -up-(  IREST          : requiere
+
+Pipeline -up- IPROC            : provee
+Backend  --(  IPROC            : requiere
+
+Storage  -up- ISTORE           : provee
+Backend  --(  ISTORE           : requiere
+Pipeline --(  ISTORE           : requiere
+
+@enduml

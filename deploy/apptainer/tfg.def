@@ -1,0 +1,71 @@
+# =============================================================================
+# Definición de imagen Apptainer para el TFG "Análisis de Baloncesto Inteligente"
+# -----------------------------------------------------------------------------
+# Sustituto reproducible y sin privilegios de root de Docker, apto para
+# servidores GPU y clústeres HPC (estándar de facto en entornos sin sudo).
+#
+# CONSTRUIR (desde la raíz del repositorio):
+#   apptainer build --fakeroot deploy/apptainer/tfg.sif deploy/apptainer/tfg.def
+#
+# EJECUTAR el pipeline con GPU (--nv expone las A100):
+#   apptainer run  --nv deploy/apptainer/tfg.sif run.py data/<video>.mp4
+#   apptainer exec --nv deploy/apptainer/tfg.sif pytest          # suite de tests
+#
+# Los modelos y datos pesados (models/, data/) NO se incluyen en la imagen:
+# se montan en tiempo de ejecución (Apptainer monta $PWD y $HOME por defecto;
+# usa --bind para rutas externas). La imagen reproduce CÓDIGO + ENTORNO, no
+# los pesos (que se descargan/enlazan aparte, igual que ahora).
+# =============================================================================
+# Base continuumio/miniconda3: trae conda y el canal `defaults`, que es el que
+# usa el lockfile (export del entorno real). Evita fricciones de canal.
+Bootstrap: docker
+From: continuumio/miniconda3:latest
+
+%files
+    # Rutas relativas a la raíz del repo (directorio de build)
+    deploy/apptainer/environment.yml      /opt/environment.yml
+    deploy/apptainer/requirements-lock.txt /opt/requirements-lock.txt
+
+%post
+    # git: para la dependencia `sports` (commit git); build-essential: por si
+    # algún paquete pip sin wheel debe compilarse; libgl1/libglib2.0-0: libs de
+    # sistema que OpenCV (cv2) necesita en tiempo de ejecución (libGL.so.1).
+    apt-get update && apt-get install -y --no-install-recommends \
+        git build-essential libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+
+    # CAPA 1 (conda): Python, CUDA 11.8, MKL, ffmpeg, nodejs y libs de sistema
+    conda env create -f /opt/environment.yml
+
+    # CAPA 2 (pip, --no-deps): conjunto EXACTO ya validado. Se usa --no-deps para
+    # reproducir el entorno tal cual, saltando el resolutor estricto (el entorno
+    # real contiene combinaciones que violan metadatos de wheels, p. ej.
+    # opencv-python 4.13 declara numpy>=2 mientras se usa numpy 1.26.4).
+    conda run -n tfg-baloncesto pip install --no-deps --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cu118 \
+        -r /opt/requirements-lock.txt
+
+    conda clean -afy
+
+    # Smoke test del entorno durante el build (falla pronto si algo no cuadra)
+    /opt/conda/envs/tfg-baloncesto/bin/python -c "import torch, cv2, supervision, transformers, ultralytics; print('entorno OK; torch', torch.__version__)"
+
+%environment
+    export PATH=/opt/conda/envs/tfg-baloncesto/bin:$PATH
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    # `apptainer run tfg.sif <args>` ejecuta python con los argumentos dados
+    exec python "$@"
+
+%labels
+    Proyecto "TFG Analisis de Baloncesto Inteligente"
+    Autor gdfraile
+    Entorno tfg-baloncesto
+    CUDA 11.8
+    Python 3.10.20
+
+%help
+    Imagen reproducible del pipeline de analisis de baloncesto.
+    Construir:  apptainer build --fakeroot deploy/apptainer/tfg.sif deploy/apptainer/tfg.def
+    Ejecutar:   apptainer run --nv deploy/apptainer/tfg.sif run.py <video>
+    Tests:      apptainer exec --nv deploy/apptainer/tfg.sif pytest

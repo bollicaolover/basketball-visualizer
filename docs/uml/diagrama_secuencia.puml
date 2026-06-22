@@ -1,0 +1,90 @@
+@startuml diagrama_secuencia
+'======================================================================
+'  TFG - Análisis Táctico de Baloncesto
+'  Diagrama de Secuencia (UML 2.x)
+'  Escenario: procesamiento completo del vídeo, de la subida a la
+'  visualización de resultados.
+'======================================================================
+title Diagrama de Secuencia — Procesamiento de vídeo y visualización de resultados
+
+skinparam dpi 130
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam sequence {
+  LifeLineBorderColor #34495E
+  ParticipantBorderColor #34495E
+  ParticipantBackgroundColor #FDFDFD
+  ActorBorderColor #34495E
+}
+
+actor "Entrenador" as Coach
+participant ":WebApp\n(Vue SPA)"            as Web
+participant ":APIServer\n(FastAPI)"         as API
+participant ":VideoProcessor\n(Pipeline)"   as VP
+participant ":Tracker\n(SAM3 / BoT-SORT)"   as TRK
+participant ":HomographyModule"             as HOM
+participant ":TacticAnalyzer"               as TAC
+database ":Storage\n(ficheros + JSON/BD)"   as DB
+
+' ====================================================================
+'  1. Subida del vídeo (síncrono, respuesta inmediata con job_id)
+' ====================================================================
+Coach -> Web ++ : subirVideo(file, config)
+Web -> API ++ : POST /api/upload {video, tracker, roster}
+API -> DB ++ : saveVideo(file)
+return videoId / jobId
+API ->> VP ++ : processVideo(jobId, config)  [asíncrono]
+return {job_id}
+Web --> Coach : "análisis en curso"
+deactivate Web
+
+' ====================================================================
+'  2. Procesamiento en segundo plano (pipeline de visión)
+' ====================================================================
+VP -> TRK ++ : initTracker(frames)
+return ok
+
+loop por cada frame del vídeo
+  VP -> TRK : detectAndTrack(frame)
+  activate TRK
+  return detections
+  VP -> HOM ++ : mapToCourt(detections, H)
+  return courtPositions
+  VP -> TAC ++ : analyze(courtPositions)
+  return plays (bloqueos + posesión)
+end
+
+VP -> DB ++ : saveResults(plays, trajectories)
+return ok
+destroy TRK
+VP -> VP : marcarJobComoTerminado(jobId)
+deactivate VP
+
+' ====================================================================
+'  3. Sondeo del estado del trabajo (polling)
+' ====================================================================
+Coach -> Web ++ : abrir resultados
+loop hasta status = "done"
+  Web -> API ++ : GET /api/jobs/{jobId}
+  return {status}
+end
+
+' ====================================================================
+'  4. Descarga y visualización de resultados
+' ====================================================================
+Web -> API ++ : GET /api/outputs/{jobId}/{metadata,tactics,overlay}
+return {video_url, plays, court_data}
+Web --> Coach : showResults()
+deactivate Web
+
+' ====================================================================
+'  5. Filtrado interactivo de capas (en el cliente)
+' ====================================================================
+Coach -> Web ++ : filtrarCapa(equipo, balón, trayectoria...)
+Web -> Web : applyLayerFilter()
+activate Web
+deactivate Web
+Web --> Coach : vista actualizada
+deactivate Web
+
+@enduml

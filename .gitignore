@@ -27,14 +27,28 @@ __pycache__/
 
 # Documentos y cuadernos de referencia externos
 *.pdf
+*.docx
 copia_de_*.py
 
 # Código externo vendorizado (clones con su propio .git): KaliCalib, etc.
 # Se enlaza por ruta (como los modelos), no se versiona dentro del repo.
 /third_party/
 
+# Toolchain vendorizado para render offline de figuras (debs, fuentes, libs): pesado
+scripts/vendor/
+
 # Frontend: entorno de build aislado (Node portable) y dependencias
 frontend/.node/
 frontend/node_modules/
 # Nota: frontend/dist/ SÍ se versiona (lo sirve el backend en producción).
 frontend_backup_*.tar.gz
+
+# PlantUML renderer jar (descargable, no versionar)
+docs/uml/plantuml.jar
+
+# Imagen Apptainer construida (artefacto pesado ~13 GB) y rastros del build.
+# La receta (tfg.def + environment.yml + requirements-lock.txt) SÍ se versiona.
+*.sif
+deploy/apptainer/build.exit
+# Pesos empaquetados para portar (los genera bundle_models.sh; no versionar)
+deploy/apptainer/models_bundle/

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" width="760" height="440">
   <defs><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}</style></defs>
-  <rect width="760" height="420" fill="#ffffff"/>
+  <rect width="760" height="440" fill="#ffffff"/>
   <rect x="60" y="52" width="672" height="318" fill="#FAFAFA"/>
   <text x="20" y="20" font-size="13" font-weight="700" fill="#111111">Cumulative Flow Diagram — basketball-visualizer</text>
   <text x="20" y="35" font-size="10" fill="#888888">Ene – Jun 2026  ·  62 tareas (57 hechas, 11 de documentación continua)  ·  WIP≤2: 1 programación + 1 documentación</text>
@@ -41,33 +41,33 @@
   <polyline points="60.0,370.0 87.8,354.6 99.8,349.5 143.5,344.4 159.4,339.2 163.4,334.1 195.2,329.0 231.0,323.8 238.9,318.7 254.8,313.6 266.8,313.6 282.7,308.5 310.5,303.3 318.5,298.2 338.3,293.1 366.2,287.9 398.0,282.8 417.9,277.7 437.8,272.5 453.7,267.4 473.5,262.3 509.3,257.2 529.2,252.0 557.0,246.9 584.9,241.8 596.8,236.6 616.7,231.5 656.4,226.4 684.3,216.1 688.3,211.0 692.2,195.6 696.2,175.1 704.2,139.2 712.1,108.4 716.1,103.3 720.1,87.9 728.0,77.6 732.0,77.6"  fill="none" stroke="#CA8A04" stroke-width="1"   stroke-linejoin="round"/>
   <polyline points="60.0,370.0 87.8,364.9 99.8,359.7 143.5,354.6 159.4,349.5 163.4,344.4 195.2,339.2 231.0,334.1 238.9,329.0 254.8,323.8 266.8,323.8 282.7,318.7 310.5,313.6 318.5,308.5 338.3,303.3 366.2,298.2 398.0,293.1 417.9,287.9 437.8,282.8 453.7,277.7 473.5,272.5 509.3,267.4 529.2,262.3 557.0,257.2 584.9,252.0 596.8,246.9 616.7,241.8 656.4,236.6 684.3,226.4 688.3,221.3 692.2,205.9 696.2,185.4 704.2,149.5 712.1,118.7 716.1,113.5 720.1,98.2 728.0,77.6 732.0,77.6"    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linejoin="round"/>
   <polyline points="60.0,370.0 87.8,370.0 99.8,364.9 143.5,364.9 159.4,359.7 163.4,359.7 195.2,359.7 231.0,359.7 238.9,354.6 254.8,354.6 266.8,354.6 282.7,354.6 310.5,354.6 318.5,349.5 338.3,349.5 366.2,349.5 398.0,349.5 417.9,349.5 437.8,344.4 453.7,344.4 473.5,344.4 509.3,344.4 529.2,344.4 557.0,344.4 584.9,344.4 596.8,339.2 616.7,339.2 656.4,334.1 684.3,334.1 688.3,329.0 692.2,329.0 696.2,329.0 704.2,323.8 712.1,323.8 716.1,318.7 720.1,318.7 728.0,313.6 732.0,313.6" fill="none" stroke="#0D9488" stroke-width="1.2" stroke-linejoin="round"/>
-  <line x1="195.2" y1="87.9" x2="195.2" y2="69.9" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
-  <text x="198.2" y="70.9" font-size="8" fill="#6366F1">+2 mejoras técnicas</text>
+  <line x1="195.2" y1="87.9" x2="195.2" y2="81.9" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="198.2" y="101.9" font-size="8" text-anchor="start" fill="#6366F1">+2 mejoras técnicas</text>
   <polygon points="195.2,85.90322580645164 192.2,80.90322580645164 198.2,80.90322580645164" fill="#6366F1"/>
-  <line x1="266.8" y1="77.6" x2="266.8" y2="59.6" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
-  <text x="269.8" y="60.6" font-size="8" fill="#6366F1">+2 mejoras técnicas</text>
+  <line x1="266.8" y1="77.6" x2="266.8" y2="71.6" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="263.8" y="91.6" font-size="8" text-anchor="end" fill="#6366F1">+2 mejoras técnicas</text>
   <polygon points="266.8,75.64516129032262 263.8,70.64516129032262 269.8,70.64516129032262" fill="#6366F1"/>
-  <line x1="338.3" y1="67.4" x2="338.3" y2="49.4" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
-  <text x="341.3" y="50.4" font-size="8" fill="#6366F1">+2 mejoras técnicas</text>
+  <line x1="338.3" y1="67.4" x2="338.3" y2="61.4" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="341.3" y="81.4" font-size="8" text-anchor="start" fill="#6366F1">+2 mejoras técnicas</text>
   <polygon points="338.3,65.38709677419354 335.3,60.38709677419354 341.3,60.38709677419354" fill="#6366F1"/>
-  <line x1="417.9" y1="52.0" x2="417.9" y2="34.0" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
-  <text x="420.9" y="35.0" font-size="8" fill="#6366F1">+3 mejoras técnicas</text>
+  <line x1="417.9" y1="52.0" x2="417.9" y2="52.0" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="414.9" y="66.0" font-size="8" text-anchor="end" fill="#6366F1">+3 mejoras técnicas</text>
   <polygon points="417.9,50.0 414.9,45.0 420.9,45.0" fill="#6366F1"/>
   <text x="441.7" y="356.4" font-size="8" fill="#0F766E" font-weight="600">documentación continua (WIP=1)</text>
   <rect x="60" y="52" width="672" height="318" fill="none" stroke="#CBD5E1" stroke-width="1"/>
   <line x1="728.0" y1="52" x2="728.0" y2="370" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="5,4"/>
   <text x="724.0" y="64" font-size="9" text-anchor="end" fill="#EF4444" font-weight="600">Entrega</text>
-  <text x="688.3" y="216.4" font-size="8" fill="#166534" font-weight="600">▲ sprint final TFG</text>
-  <text x="723.0" y="65.0" font-size="8" text-anchor="end" fill="#991B1B">5 tareas</text>
-  <text x="723.0" y="76.0" font-size="8" text-anchor="end" fill="#991B1B">diferidas</text>
-  <rect x="60" y="391" width="14" height="10" fill="#BBF7D0" stroke="#16A34A" stroke-width="1" rx="2"/>
-  <text x="79" y="400" font-size="10" fill="#555555">Hecho · programación</text>
-  <rect x="210.0" y="391" width="14" height="10" fill="#99F6E4" stroke="#0D9488" stroke-width="1" rx="2"/>
-  <text x="229.0" y="400" font-size="10" fill="#555555">Hecho · documentación</text>
-  <rect x="366.0" y="391" width="14" height="10" fill="#FDE68A" stroke="#CA8A04" stroke-width="1" rx="2"/>
-  <text x="385.0" y="400" font-size="10" fill="#555555">En progreso (WIP≤2)</text>
-  <rect x="510.0" y="391" width="14" height="10" fill="#FECACA" stroke="#DC2626" stroke-width="1" rx="2"/>
-  <text x="529.0" y="400" font-size="10" fill="#555555">Por hacer / diferido</text>
-  <rect x="660.0" y="391" width="14" height="10" fill="#E0E7FF" stroke="#6366F1" stroke-width="1" rx="2"/>
-  <text x="679.0" y="400" font-size="10" fill="#555555">Scope discovery</text>
+  <text x="680.3" y="216.4" font-size="8" text-anchor="end" fill="#166534" font-weight="600">sprint final TFG ▲</text>
+  <text x="723.0" y="80.0" font-size="8" text-anchor="end" fill="#991B1B">5 tareas</text>
+  <text x="723.0" y="91.0" font-size="8" text-anchor="end" fill="#991B1B">diferidas</text>
+  <rect x="60" y="389" width="14" height="10" fill="#BBF7D0" stroke="#16A34A" stroke-width="1" rx="2"/>
+  <text x="79" y="398" font-size="10" fill="#555555">Hecho · programación</text>
+  <rect x="293" y="389" width="14" height="10" fill="#99F6E4" stroke="#0D9488" stroke-width="1" rx="2"/>
+  <text x="312" y="398" font-size="10" fill="#555555">Hecho · documentación</text>
+  <rect x="526" y="389" width="14" height="10" fill="#FDE68A" stroke="#CA8A04" stroke-width="1" rx="2"/>
+  <text x="545" y="398" font-size="10" fill="#555555">En progreso (WIP≤2)</text>
+  <rect x="60" y="403" width="14" height="10" fill="#FECACA" stroke="#DC2626" stroke-width="1" rx="2"/>
+  <text x="79" y="412" font-size="10" fill="#555555">Por hacer / diferido</text>
+  <rect x="293" y="403" width="14" height="10" fill="#E0E7FF" stroke="#6366F1" stroke-width="1" rx="2"/>
+  <text x="312" y="412" font-size="10" fill="#555555">Scope discovery</text>
 </svg>

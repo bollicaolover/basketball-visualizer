@@ -105,8 +105,8 @@ def build_data() -> list:
 
 
 # ── Función de renderizado ─────────────────────────────────────────────────────
-W, H       = 760, 420
-ML, MR, MT, MB = 60, 28, 52, 50
+W, H       = 760, 440
+ML, MR, MT, MB = 60, 28, 52, 70
 CW = W - ML - MR
 CH = H - MT - MB
 
@@ -205,15 +205,26 @@ def render_cfd(out_path: Path, data: list, snapshot_day: int | None = None,
 
     # ── Marcadores de scope discovery (solo los que ya han ocurrido) ────────────
     last_day = data[-1][0]
-    for disc_day, disc_scope, disc_label in DISCOVERIES:
+    for i, (disc_day, disc_scope, disc_label) in enumerate(DISCOVERIES):
         if disc_day > last_day:
             continue
         x  = cx(disc_day)
         y0 = cy(disc_scope)
         y1 = y0 - 18
+        # Alternar anchor izq/dcha para evitar solapamiento horizontal
+        if i % 2 == 0:
+            tx, anchor = x + 3, "start"
+        else:
+            tx, anchor = x - 3, "end"
+        # Si el tallo llega demasiado cerca del borde superior, bajar la etiqueta
+        if y1 < MT + 20:
+            label_y = y0 + 14
+            y1 = max(y0 - 6, MT)   # tallo corto
+        else:
+            label_y = y1 + 1
         L.append(f'  <line x1="{x:.1f}" y1="{y0:.1f}" x2="{x:.1f}" y2="{y1:.1f}"'
                  f' stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>')
-        L.append(f'  <text x="{x+3:.1f}" y="{y1+1:.1f}" font-size="8" fill="#6366F1">{disc_label}</text>')
+        L.append(f'  <text x="{tx:.1f}" y="{label_y:.1f}" font-size="8" text-anchor="{anchor}" fill="#6366F1">{disc_label}</text>')
         L.append(f'  <polygon points="{x:.1f},{y0-2} {x-3:.1f},{y0-7} {x+3:.1f},{y0-7}" fill="#6366F1"/>')
 
     # ── Etiqueta del flujo de documentación continua ────────────────────────────
@@ -244,28 +255,35 @@ def render_cfd(out_path: Path, data: list, snapshot_day: int | None = None,
     # ── Anotación sprint final TFG ──────────────────────────────────────────────
     if not is_snapshot or snapshot_day >= 157:
         ax, ay = cx(157), cy(step(PROG_DONE, 157) + step(DOC_DONE, 157)) - 10
-        L.append(f'  <text x="{ax+4:.1f}" y="{ay:.1f}" font-size="8" fill="#166534" font-weight="600">▲ sprint final TFG</text>')
+        # text-anchor="end" para que no desborde el borde derecho
+        L.append(f'  <text x="{ax-4:.1f}" y="{ay:.1f}" font-size="8" text-anchor="end" fill="#166534" font-weight="600">sprint final TFG ▲</text>')
 
     # ── Anotación "5 diferidas" (CFD completo o snapshot final) ──────────────────
     if not is_snapshot or snapshot_day >= 168:
-        dx, dy = cx(168) - 5, cy(scope_now) + 13
+        dx, dy = cx(168) - 5, cy(scope_now) + 28  # bajado para no solapar "Entrega"
         L.append(f'  <text x="{dx:.1f}" y="{dy:.1f}" font-size="8" text-anchor="end" fill="#991B1B">5 tareas</text>')
         L.append(f'  <text x="{dx:.1f}" y="{dy+11:.1f}" font-size="8" text-anchor="end" fill="#991B1B">diferidas</text>')
 
-    # ── Leyenda ──────────────────────────────────────────────────────────────────
-    leg_y = MT + CH + 30
-    items = [
-        ("#BBF7D0", "#16A34A", "solid",  "Hecho · programación"),
-        ("#99F6E4", "#0D9488", "solid",  "Hecho · documentación"),
-        ("#FDE68A", "#CA8A04", "solid",  "En progreso (WIP≤2)"),
-        ("#FECACA", "#DC2626", "dashed", "Por hacer / diferido"),
-        ("#E0E7FF", "#6366F1", "dashed", "Scope discovery"),
+    # ── Leyenda (2 filas para no desbordar el ancho) ─────────────────────────────
+    leg_y = MT + CH + 28
+    row1 = [
+        ("#BBF7D0", "#16A34A", "Hecho · programación"),
+        ("#99F6E4", "#0D9488", "Hecho · documentación"),
+        ("#FDE68A", "#CA8A04", "En progreso (WIP≤2)"),
     ]
-    lx = ML
-    for fill, stroke, style, lbl in items:
+    row2 = [
+        ("#FECACA", "#DC2626", "Por hacer / diferido"),
+        ("#E0E7FF", "#6366F1", "Scope discovery"),
+    ]
+    col_w = (CW + MR) // 3   # ~233px por columna
+    for j, (fill, stroke, lbl) in enumerate(row1):
+        lx = ML + j * col_w
         L.append(f'  <rect x="{lx}" y="{leg_y-9}" width="14" height="10" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
         L.append(f'  <text x="{lx+19}" y="{leg_y}" font-size="10" fill="#555555">{lbl}</text>')
-        lx += len(lbl) * 6.0 + 30
+    for j, (fill, stroke, lbl) in enumerate(row2):
+        lx = ML + j * col_w
+        L.append(f'  <rect x="{lx}" y="{leg_y+5}" width="14" height="10" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
+        L.append(f'  <text x="{lx+19}" y="{leg_y+14}" font-size="10" fill="#555555">{lbl}</text>')
 
     L.append('</svg>')
 
