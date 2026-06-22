@@ -228,7 +228,7 @@ Ambos comparten la misma idea: API REST + jobs en background + subprocess del pi
 
 | | baloncesto-tacticas | tfg-junio |
 |---|---------------------|-----------|
-| **Docker** | `docker/docker-compose.yml` (Postgres, MinIO) | Mencionado en docs; `serve.sh` local |
+| **Contenedores** | `docker/docker-compose.yml` (Postgres, MinIO) | Apptainer rootless con GPU (`deploy/apptainer/`); `serve.sh` local |
 | **systemd** | `basket2d.service` | No |
 | **Scripts arranque** | `start.sh`, `stop.sh`, `serve.sh`, `tunnel.py` | `serve.sh`, `run_batch.sh` |
 | **Gradio** | `.gradio_tmp/` (prototipos) | No |
@@ -313,7 +313,7 @@ models/artifacts/legibility/              →  models/legibility/      (bootstra
 | Fichero | Contenido |
 |---------|-----------|
 | `arquitectura.md` | Frontend, backend, pipeline; tabla "quiero cambiar X" |
-| `metodologia.md` | Kanban + CRISP-DM, cronología, iteraciones |
+| `metodologia.md` | Kanban (ágil, individual), tablero, trazabilidad, iteraciones |
 | `estado-del-arte.md` | Cap. 2: conceptos, alternativas, justificación RF-DETR+SAM3 |
 | `datos-reales-tfg.md` | Métricas medidas, commits, LoC, componentes NO implementados |
 | `plan-tfg.md` | Plan de redacción memoria, progreso por capítulo |
@@ -344,7 +344,9 @@ En la memoria conviene explicar que el TFG pasó por **dos iteraciones**:
 2. **Fase de convergencia** (`tfg-junio`): selección de RF-DETR+SAM3+SmolVLM2,
    simplificación del pipeline, foco en identificación y proyección 2D.
 
-Esto demuestra **proceso iterativo CRISP-DM** (probar alternativas, medir, descartar).
+Esto demuestra un **proceso iterativo y experimental** (probar alternativas, medir,
+descartar), coherente con el flujo continuo de Kanban: las tarjetas de experimento y
+de *rework* se incorporaban según los resultados empíricos.
 
 ### 9.2 Métricas reutilizables del repo antiguo
 

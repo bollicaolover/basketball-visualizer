@@ -138,7 +138,7 @@ resolver esto antes de escribir una línea más, porque afecta a TODO el documen
 | O5: reconocimiento de acciones (pose ST-GCN/PoseConv3D) | sí | **NO hecho** | → mover a *Vías futuras*; quitar de objetivos |
 | 6.5 Reconocimiento de tácticas / 6.6 Motor de recomendación | sí | **NO hecho** | → reemplazar esas subsecciones por las etapas reales del pipeline |
 | "en tiempo real" | sí | procesado por lotes (batch), multi-GPU | Quitar "tiempo real"; hablar de rendimiento por lotes |
-| Despliegue | — | CLI + **app web Vue 3 + FastAPI**, Docker, multi-GPU | Es un punto fuerte: explotarlo |
+| Despliegue | — | CLI + **app web Vue 3 + FastAPI**, contenedor reproducible (Apptainer), multi-GPU | Es un punto fuerte: explotarlo |
 
 **Regla de oro:** la memoria debe describir lo que el tribunal puede ejecutar y
 ver en el código. Todo lo no construido (acciones por pose, motor de tácticas,
@@ -232,7 +232,7 @@ justificación técnica. No infles los demás con relleno; infla 6 con sustancia
 ### Cap. 4 — Tecnologías y herramientas (6–8 pp)
 - Tabla del stack (está en el README): PyTorch, RF-DETR, SAM 3, SigLIP, SmolVLM2,
   Ultralytics, `supervision`, UMAP, scikit-learn / FastAPI, Uvicorn / Vue 3,
-  Vite, Node 20 / Roboflow (datasets), Docker, conda, Git+GitHub.
+  Vite, Node 20 / Roboflow (datasets), Apptainer, conda, Git+GitHub.
 - Para cada bloque: **qué es y por qué se eligió** (1–2 frases). Incluye versión.
 - **Figuras**: logos/tabla por capas (ML / Backend / Frontend / Datos / DevOps).
 
@@ -261,7 +261,7 @@ subsecciones de la plantilla (6.5/6.6 no aplican).
   VRAM, escalado multi-GPU (speedup con chunking). Saca números reales de los
   logs y del `profiling.py`.
 - **7.3 Escalabilidad/mantenimiento**: arquitectura modular, multi-GPU con
-  `chunking.py`, Docker, separación pipeline/backend/frontend, convenciones de
+  `chunking.py`, contenedor reproducible (Apptainer), separación pipeline/backend/frontend, convenciones de
   código (de `arquitectura.md`).
 - **7.4 Formación de usuarios**: breve; remite al manual de usuario (anexo).
 - **Figuras**: gráfica de latencia/FPS, gráfica de speedup multi-GPU, tabla de
@@ -283,7 +283,7 @@ subsecciones de la plantilla (6.5/6.6 no aplican).
 
 ### Cap. 10 — Anexos (5–8 pp)
 - **10.1 Manual de instalación**: basado en README (conda, `fetch_models.py`,
-  Node 20 local, `serve.sh`, Docker).
+  Node 20 local, `serve.sh`, Apptainer).
 - **10.2 Manual de usuario**: flujo de la app web con capturas (subir vídeo →
   GPU → progreso → resultados → roster).
 - **10.3 Otros**: formato del roster JSON, opciones de la CLI, estructura de

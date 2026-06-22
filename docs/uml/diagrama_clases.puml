@@ -1,0 +1,113 @@
+@startuml diagrama_clases
+'======================================================================
+'  TFG - Análisis Táctico de Baloncesto
+'  Diagrama de Clases del modelo de dominio (UML 2.x)
+'======================================================================
+title Diagrama de Clases — Modelo de dominio del análisis táctico
+
+skinparam dpi 130
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+  ArrowColor #34495E
+}
+
+' --------------------------------------------------------------------
+'  Enumeración
+' --------------------------------------------------------------------
+enum TipoJugada <<enumeration>> {
+  BLOQUEO_FRONTAL
+  BLOQUEO_TRASERO
+  BLOQUEO_HACIA_ABAJO
+  POSESION
+}
+
+' --------------------------------------------------------------------
+'  Clases de dominio
+' --------------------------------------------------------------------
+class Partido {
+  - id: str
+  - fecha: datetime
+  - videoPath: str
+  - duracion: float
+  --
+  + getJugadas(): List<Jugada>
+  + getEstadisticas(): Estadistica
+}
+
+class Equipo {
+  - id: str
+  - nombre: str
+  - color: str
+  --
+  + getJugador(dorsal: int): Jugador
+}
+
+class Jugador {
+  - id: str
+  - nombre: str
+  - dorsal: int
+  --
+  + getPosesiones(): List<Posesion>
+}
+
+class Jugada {
+  - id: str
+  - tipo: TipoJugada
+  - timestampInicio: float
+  - timestampFin: float
+  --
+  + getDuracion(): float
+  + getClip(): str
+}
+
+class Estadistica {
+  - totalJugadas: int
+  - jugadasPorTipo: Map<TipoJugada, int>
+  - jugadasPorJugador: Map<Jugador, int>
+  --
+  + resumen(): str
+}
+
+class Trayectoria {
+  - puntos: List<Tuple<float, float>>
+  - frameInicio: int
+  - frameFin: int
+}
+
+class Posesion {
+  - frameInicio: int
+  - frameFin: int
+  - confianza: float
+}
+
+' --------------------------------------------------------------------
+'  Relaciones
+' --------------------------------------------------------------------
+'  Composición (rombo relleno): el ciclo de vida depende del Partido
+Partido "1" *-- "1..*" Jugada       : contiene >
+Partido "1" *-- "1"    Estadistica  : resume >
+
+'  Asociación Partido — Equipo (local / visitante), multiplicidad en ambos extremos
+Equipo "1" -- "0..*" Partido : local <
+Equipo "1" -- "0..*" Partido : visitante <
+
+'  Agregación (rombo hueco): los Jugadores son compartidos / persisten
+Equipo "1" o-- "1..*" Jugador : integra >
+
+'  Composición: trayectorias y posesiones pertenecen al Jugador
+Jugador "1" *-- "0..*" Trayectoria : describe >
+Jugador "1" *-- "0..*" Posesion    : registra >
+
+'  Asociación: jugadores implicados en una jugada
+Jugada "0..*" -- "1..*" Jugador : implica >
+
+'  Dependencias (flecha discontinua): uso temporal de otra clase
+Jugada      ..> TipoJugada : <<use>>
+Estadistica ..> TipoJugada : <<use>>
+Estadistica ..> Jugador    : <<use>>
+
+@enduml

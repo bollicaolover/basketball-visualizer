@@ -122,7 +122,7 @@ El sistema construido se distingue en cuatro ejes:
 - OCR de dorsal (SmolVLM2 fine-tuneado) + resolución de nombre vía roster.
 - Proyección 2D por homografía (keypoints de cancha) y minimapa cenital.
 - Resolución de posesión (histéresis temporal) y detección de tiros.
-- Aplicación web (subida, GPU, progreso, visualización) + CLI; multi-GPU; Docker.
+- Aplicación web (subida, GPU, progreso, visualización) + CLI; multi-GPU; entorno reproducible en contenedor (Apptainer).
 
 **Fuera del alcance (se trasladan a Vías futuras, cap. 8):**
 

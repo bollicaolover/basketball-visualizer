@@ -4,7 +4,7 @@ Guía para quien vaya a **modificar** la aplicación. Explica cómo está
 organizado el código, dónde vive cada cosa y dónde tocar para los cambios más
 habituales.
 
-> Para la metodología del TFG (Kanban + CRISP-DM) ver [`metodologia.md`](metodologia.md).
+> Para la metodología del TFG (Kanban) ver [`metodologia.md`](metodologia.md).
 
 ---
 

@@ -1,0 +1,98 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#004379"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#004379">Basketball Play Visualizer — C4 Nivel 2: Contenedores</text>
+  <text x="450" y="52" text-anchor="middle" font-size="11" fill="#595959">Aplicaciones, servicios y almacenes que componen el sistema</text>
+
+  <!-- ===== Relationships ===== -->
+  <!-- Vue SPA -> FastAPI -->
+  <line x1="245" y1="160" x2="345" y2="160" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="295" y="138" text-anchor="middle" font-size="10" fill="#595959">HTTP REST / JSON</text>
+  <text x="295" y="150" text-anchor="middle" font-size="10" fill="#595959">(subida, polling,</text>
+  <text x="295" y="174" text-anchor="middle" font-size="10" fill="#595959">resultados)</text>
+
+  <!-- FastAPI -> ML Pipeline -->
+  <line x1="555" y1="160" x2="655" y2="160" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="605" y="143" text-anchor="middle" font-size="10" fill="#595959">Lanza subproceso</text>
+  <text x="605" y="155" text-anchor="middle" font-size="10" fill="#595959">por trabajo</text>
+
+  <!-- FastAPI -> File System -->
+  <line x1="450" y1="230" x2="450" y2="345" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="460" y="290" font-size="10" fill="#595959">Lee / escribe</text>
+  <text x="460" y="302" font-size="10" fill="#595959">resultados</text>
+
+  <!-- ML Pipeline -> File System -->
+  <line x1="730" y1="230" x2="560" y2="350" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="690" y="296" text-anchor="middle" font-size="10" fill="#595959">Escribe JSON +</text>
+  <text x="690" y="308" text-anchor="middle" font-size="10" fill="#595959">frames anotados</text>
+
+  <!-- ML Pipeline -> GPU Server -->
+  <line x1="755" y1="230" x2="755" y2="345" stroke="#004379" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="765" y="285" font-size="10" fill="#595959">Inferencia CUDA</text>
+  <text x="765" y="297" font-size="10" fill="#595959">(RF-DETR, SAM 3,</text>
+  <text x="765" y="309" font-size="10" fill="#595959">SmolVLM2)</text>
+
+  <!-- ===== Container: Vue 3 SPA ===== -->
+  <rect x="45" y="100" width="200" height="120" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.8"/>
+  <text x="145" y="128" text-anchor="middle" font-size="14" font-weight="bold" fill="#385723">Vue 3 SPA</text>
+  <text x="145" y="146" text-anchor="middle" font-size="10" fill="#595959">[Contenedor: Vue 3 + Vite]</text>
+  <text x="145" y="168" text-anchor="middle" font-size="11" fill="#595959">Reproductor de vídeo,</text>
+  <text x="145" y="182" text-anchor="middle" font-size="11" fill="#595959">minimapa 2D, panel táctico,</text>
+  <text x="145" y="196" text-anchor="middle" font-size="11" fill="#595959">sidebar de estadísticas GPU</text>
+
+  <!-- ===== Container: FastAPI Backend ===== -->
+  <rect x="355" y="100" width="200" height="120" rx="4" fill="#D9E2F3" stroke="#004379" stroke-width="1.8"/>
+  <text x="455" y="128" text-anchor="middle" font-size="14" font-weight="bold" fill="#004379">FastAPI Backend</text>
+  <text x="455" y="146" text-anchor="middle" font-size="10" fill="#595959">[Contenedor: Python 3.10 async]</text>
+  <text x="455" y="168" text-anchor="middle" font-size="11" fill="#595959">API REST, autenticación HMAC,</text>
+  <text x="455" y="182" text-anchor="middle" font-size="11" fill="#595959">troceado de vídeo,</text>
+  <text x="455" y="196" text-anchor="middle" font-size="11" fill="#595959">orquestación de trabajos</text>
+
+  <!-- ===== Container: ML Pipeline ===== -->
+  <rect x="655" y="90" width="210" height="140" rx="4" fill="#FCE4D6" stroke="#C55A11" stroke-width="1.8"/>
+  <text x="760" y="120" text-anchor="middle" font-size="14" font-weight="bold" fill="#9C3D08">ML Pipeline</text>
+  <text x="760" y="138" text-anchor="middle" font-size="10" fill="#595959">[Contenedor: Python + PyTorch]</text>
+  <text x="760" y="160" text-anchor="middle" font-size="11" fill="#595959">Pipeline completo de análisis:</text>
+  <text x="760" y="174" text-anchor="middle" font-size="11" fill="#595959">detección, tracking, homografía,</text>
+  <text x="760" y="188" text-anchor="middle" font-size="11" fill="#595959">equipos/dorsales, posesión,</text>
+  <text x="760" y="202" text-anchor="middle" font-size="11" fill="#595959">tiros y reconocimiento táctico</text>
+  <text x="760" y="220" text-anchor="middle" font-size="10" fill="#9C3D08" font-style="italic">~5112 LoC · OpenCV</text>
+
+  <!-- ===== Container: File System ===== -->
+  <rect x="350" y="350" width="210" height="110" rx="4" fill="#F2F2F2" stroke="#7F7F7F" stroke-width="1.8"/>
+  <text x="455" y="380" text-anchor="middle" font-size="14" font-weight="bold" fill="#404040">Sistema de ficheros</text>
+  <text x="455" y="398" text-anchor="middle" font-size="10" fill="#595959">[Almacén: JSON + vídeo]</text>
+  <text x="455" y="420" text-anchor="middle" font-size="11" fill="#595959">Metadatos por trabajo,</text>
+  <text x="455" y="434" text-anchor="middle" font-size="11" fill="#595959">resultados y frames</text>
+  <text x="455" y="448" text-anchor="middle" font-size="11" fill="#595959">anotados</text>
+
+  <!-- ===== External: GPU Server ===== -->
+  <rect x="655" y="350" width="210" height="110" rx="4" fill="#ffffff" stroke="#2E74B5" stroke-width="1.6" stroke-dasharray="6,4"/>
+  <text x="760" y="380" text-anchor="middle" font-size="14" font-weight="bold" fill="#004379">Servidor GPU</text>
+  <text x="760" y="398" text-anchor="middle" font-size="10" fill="#595959">[Externo / infraestructura]</text>
+  <text x="760" y="420" text-anchor="middle" font-size="11" fill="#595959">2× NVIDIA A100 40GB</text>
+  <text x="760" y="434" text-anchor="middle" font-size="11" fill="#595959">CUDA 12.6</text>
+  <text x="760" y="448" text-anchor="middle" font-size="11" fill="#595959">conda + serve.sh</text>
+
+  <!-- ===== Legend ===== -->
+  <rect x="45" y="495" width="820" height="80" rx="4" fill="#ffffff" stroke="#bfbfbf" stroke-width="1"/>
+  <text x="60" y="515" font-size="12" font-weight="bold" fill="#004379">Leyenda</text>
+  <rect x="60" y="527" width="24" height="18" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.4"/>
+  <text x="92" y="541" font-size="11" fill="#595959">Frontend</text>
+  <rect x="175" y="527" width="24" height="18" rx="4" fill="#D9E2F3" stroke="#004379" stroke-width="1.4"/>
+  <text x="207" y="541" font-size="11" fill="#595959">Backend</text>
+  <rect x="290" y="527" width="24" height="18" rx="4" fill="#FCE4D6" stroke="#C55A11" stroke-width="1.4"/>
+  <text x="322" y="541" font-size="11" fill="#595959">Pipeline ML</text>
+  <rect x="420" y="527" width="24" height="18" rx="4" fill="#F2F2F2" stroke="#7F7F7F" stroke-width="1.4"/>
+  <text x="452" y="541" font-size="11" fill="#595959">Almacén</text>
+  <rect x="535" y="527" width="24" height="18" rx="4" fill="#ffffff" stroke="#2E74B5" stroke-width="1.4" stroke-dasharray="5,3"/>
+  <text x="567" y="541" font-size="11" fill="#595959">Externo</text>
+  <line x1="650" y1="536" x2="690" y2="536" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="698" y="541" font-size="11" fill="#595959">Relación entre contenedores</text>
+  <text x="60" y="566" font-size="10" fill="#595959" font-style="italic">Las flechas discontinuas indican dependencias de infraestructura externa (CUDA).</text>
+</svg>

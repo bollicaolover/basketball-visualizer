@@ -1,0 +1,100 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#004379"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="28" text-anchor="middle" font-size="19" font-weight="bold" fill="#004379">C4 Nivel 3: Componentes del contenedor ML Pipeline</text>
+  <text x="450" y="46" text-anchor="middle" font-size="11" fill="#595959">Módulos internos de pipeline/ (~5112 LoC) — flujo de datos de arriba abajo</text>
+
+  <!-- ===== Vertical data-flow arrows (under boxes) ===== -->
+  <line x1="450" y1="108" x2="450" y2="128" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="280" y1="196" x2="280" y2="216" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="620" y1="196" x2="620" y2="216" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="280" y1="298" x2="280" y2="318" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="620" y1="298" x2="620" y2="318" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="450" y1="392" x2="450" y2="412" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="462" y="124" font-size="9" fill="#2E74B5">frames</text>
+  <text x="292" y="212" font-size="9" fill="#2E74B5">detecciones</text>
+  <text x="632" y="212" font-size="9" fill="#2E74B5">tracklets</text>
+  <text x="292" y="314" font-size="9" fill="#2E74B5">posiciones 2D</text>
+  <text x="632" y="314" font-size="9" fill="#2E74B5">identidades</text>
+  <text x="462" y="408" font-size="9" fill="#2E74B5">eventos</text>
+
+  <!-- ===== Layer 1: I/O ===== -->
+  <text x="20" y="88" font-size="11" font-weight="bold" fill="#7F7F7F">Capa 1 · I/O</text>
+  <rect x="300" y="60" width="300" height="48" rx="4" fill="#F2F2F2" stroke="#7F7F7F" stroke-width="1.6"/>
+  <text x="450" y="80" text-anchor="middle" font-size="12" font-weight="bold" fill="#404040">Módulo I/O · pipeline/io/</text>
+  <text x="450" y="98" text-anchor="middle" font-size="10" fill="#595959">Ingesta de vídeo · extracción de frames · escritor de metadatos</text>
+
+  <!-- ===== Layer 2: Perception ===== -->
+  <text x="20" y="160" font-size="11" font-weight="bold" fill="#C55A11">Capa 2 · Percepción</text>
+  <rect x="130" y="130" width="290" height="66" rx="4" fill="#FCE4D6" stroke="#C55A11" stroke-width="1.6"/>
+  <text x="275" y="152" text-anchor="middle" font-size="12" font-weight="bold" fill="#9C3D08">Detección · pipeline/detection/</text>
+  <text x="275" y="170" text-anchor="middle" font-size="10" fill="#595959">RF-DETR — jugadores, árbitros y balón</text>
+  <text x="275" y="184" text-anchor="middle" font-size="10" fill="#595959">(11 clases)</text>
+
+  <rect x="480" y="130" width="290" height="66" rx="4" fill="#FCE4D6" stroke="#C55A11" stroke-width="1.6"/>
+  <text x="625" y="152" text-anchor="middle" font-size="12" font-weight="bold" fill="#9C3D08">Tracking · pipeline/tracking/</text>
+  <text x="625" y="170" text-anchor="middle" font-size="10" fill="#595959">SAM 3 — segmentación de máscaras persistentes</text>
+  <text x="625" y="184" text-anchor="middle" font-size="10" fill="#595959">suavizado de trayectorias</text>
+
+  <!-- ===== Layer 3: Geometry & Identity ===== -->
+  <text x="20" y="262" font-size="11" font-weight="bold" fill="#004379">Capa 3 · Geometría</text>
+  <text x="20" y="276" font-size="11" font-weight="bold" fill="#004379">e identidad</text>
+  <rect x="130" y="218" width="290" height="80" rx="4" fill="#D9E2F3" stroke="#004379" stroke-width="1.6"/>
+  <text x="275" y="240" text-anchor="middle" font-size="12" font-weight="bold" fill="#004379">Court · pipeline/court/</text>
+  <text x="275" y="257" text-anchor="middle" font-size="10" fill="#595959">Keypoints · homografía · calibración</text>
+  <text x="275" y="271" text-anchor="middle" font-size="10" fill="#595959">de cámara · geometría FIBA</text>
+  <text x="275" y="289" text-anchor="middle" font-size="10" fill="#004379" font-style="italic">1918 LoC</text>
+
+  <rect x="480" y="218" width="290" height="80" rx="4" fill="#D9E2F3" stroke="#004379" stroke-width="1.6"/>
+  <text x="625" y="240" text-anchor="middle" font-size="12" font-weight="bold" fill="#004379">Identidad · pipeline/identity/ + teams/</text>
+  <text x="625" y="257" text-anchor="middle" font-size="10" fill="#595959">SigLIP + UMAP + K-means → equipos</text>
+  <text x="625" y="271" text-anchor="middle" font-size="10" fill="#595959">SmolVLM2 + LoRA → OCR de dorsales</text>
+  <text x="625" y="289" text-anchor="middle" font-size="10" fill="#004379" font-style="italic">85.26% de acierto</text>
+
+  <!-- ===== Layer 4: Analytics ===== -->
+  <text x="20" y="358" font-size="11" font-weight="bold" fill="#548235">Capa 4 · Analítica</text>
+  <rect x="70" y="320" width="220" height="72" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.6"/>
+  <text x="180" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#385723">Posesión</text>
+  <text x="180" y="358" text-anchor="middle" font-size="10" fill="#595959">pipeline/possession/</text>
+  <text x="180" y="374" text-anchor="middle" font-size="10" fill="#595959">Resolución de posesión</text>
+  <text x="180" y="386" text-anchor="middle" font-size="10" fill="#595959">del balón</text>
+
+  <rect x="340" y="320" width="220" height="72" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.6"/>
+  <text x="450" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#385723">Anotación de tiros</text>
+  <text x="450" y="358" text-anchor="middle" font-size="10" fill="#595959">pipeline/scoring/</text>
+  <text x="450" y="374" text-anchor="middle" font-size="10" fill="#595959">Detección de tiro por</text>
+  <text x="450" y="386" text-anchor="middle" font-size="10" fill="#595959">pose / trayectoria</text>
+
+  <rect x="610" y="320" width="220" height="72" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.6"/>
+  <text x="720" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#385723">Táctica</text>
+  <text x="720" y="358" text-anchor="middle" font-size="10" fill="#595959">pipeline/tactics/</text>
+  <text x="720" y="374" text-anchor="middle" font-size="10" fill="#595959">Pantallas / pick-and-roll</text>
+  <text x="720" y="386" text-anchor="middle" font-size="10" fill="#595959">por reglas geométricas</text>
+
+  <!-- ===== Integration ===== -->
+  <text x="20" y="440" font-size="11" font-weight="bold" fill="#7030A0">Integración</text>
+  <rect x="250" y="414" width="400" height="52" rx="4" fill="#EAE0F0" stroke="#7030A0" stroke-width="1.6"/>
+  <text x="450" y="436" text-anchor="middle" font-size="12" font-weight="bold" fill="#5B2487">Wrappers de Backend · backend/app/</text>
+  <text x="450" y="454" text-anchor="middle" font-size="10" fill="#595959">Endpoints FastAPI que orquestan el pipeline y exponen resultados</text>
+
+  <!-- ===== Legend ===== -->
+  <rect x="40" y="490" width="820" height="92" rx="4" fill="#ffffff" stroke="#bfbfbf" stroke-width="1"/>
+  <text x="55" y="510" font-size="12" font-weight="bold" fill="#004379">Leyenda — capas funcionales</text>
+  <rect x="55" y="522" width="22" height="16" rx="4" fill="#F2F2F2" stroke="#7F7F7F" stroke-width="1.3"/>
+  <text x="85" y="535" font-size="11" fill="#595959">I/O</text>
+  <rect x="150" y="522" width="22" height="16" rx="4" fill="#FCE4D6" stroke="#C55A11" stroke-width="1.3"/>
+  <text x="180" y="535" font-size="11" fill="#595959">Percepción</text>
+  <rect x="300" y="522" width="22" height="16" rx="4" fill="#D9E2F3" stroke="#004379" stroke-width="1.3"/>
+  <text x="330" y="535" font-size="11" fill="#595959">Geometría e identidad</text>
+  <rect x="520" y="522" width="22" height="16" rx="4" fill="#E2EFDA" stroke="#548235" stroke-width="1.3"/>
+  <text x="550" y="535" font-size="11" fill="#595959">Analítica</text>
+  <rect x="660" y="522" width="22" height="16" rx="4" fill="#EAE0F0" stroke="#7030A0" stroke-width="1.3"/>
+  <text x="690" y="535" font-size="11" fill="#595959">Integración</text>
+  <line x1="55" y1="560" x2="95" y2="560" stroke="#004379" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="105" y="564" font-size="11" fill="#595959">Flujo de datos entre módulos (las etiquetas en azul indican el artefacto que circula)</text>
+</svg>

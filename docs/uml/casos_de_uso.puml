@@ -1,0 +1,71 @@
+@startuml casos_de_uso
+'======================================================================
+'  TFG - Análisis Táctico de Baloncesto
+'  Diagrama de Casos de Uso (UML 2.x)
+'======================================================================
+title Diagrama de Casos de Uso — Sistema de Análisis Táctico de Baloncesto
+
+top to bottom direction
+skinparam dpi 130
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+}
+skinparam actor {
+  BorderColor #34495E
+}
+
+' --------------------------------------------------------------------
+'  Actores
+' --------------------------------------------------------------------
+actor "Entrenador" as Coach
+actor "Sistema CV Pipeline" as CV
+
+' --------------------------------------------------------------------
+'  Frontera del sistema
+' --------------------------------------------------------------------
+rectangle "Sistema de Análisis Táctico de Baloncesto" {
+
+  usecase "Subir vídeo de partido"                       as UC_Upload
+  usecase "Configurar parámetros de análisis\n(tracker SAM3/BoT-SORT, GPU, roster)" as UC_Config
+  usecase "Aplicar roster de jugadores\n(nombres y dorsales)"  as UC_Roster
+  usecase "Procesar vídeo\n(visión por computador)"      as UC_Process
+
+  usecase "Visualizar vídeo procesado"                   as UC_View
+  usecase "Controlar reproducción\n(play, pausa, velocidad, frame a frame)" as UC_Playback
+  usecase "Filtrar capas de visualización\n(equipo, árbitro, balón, trayectoria, posesor)" as UC_Filter
+
+  usecase "Consultar jugadas detectadas\n(bloqueos front/back/down)" as UC_Plays
+  usecase "Consultar esquema 2D cenital"                 as UC_Court
+  usecase "Revisar clips históricos"                     as UC_Clips
+  usecase "Descargar clip"                               as UC_Download
+}
+
+' --------------------------------------------------------------------
+'  Asociaciones actor — caso de uso (línea sólida, sin flecha)
+' --------------------------------------------------------------------
+Coach -- UC_Upload
+Coach -- UC_View
+Coach -- UC_Plays
+Coach -- UC_Court
+Coach -- UC_Clips
+
+UC_Process -- CV
+
+' --------------------------------------------------------------------
+'  «include» — subflujos obligatorios
+' --------------------------------------------------------------------
+UC_Upload ..> UC_Config  : <<include>>
+UC_Upload ..> UC_Process : <<include>>
+
+' --------------------------------------------------------------------
+'  «extend» — flujos opcionales / condicionales
+' --------------------------------------------------------------------
+UC_Roster   ..> UC_Config : <<extend>>
+UC_Playback ..> UC_View   : <<extend>>
+UC_Filter   ..> UC_View   : <<extend>>
+UC_Download ..> UC_Clips  : <<extend>>
+
+@enduml
