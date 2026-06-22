@@ -4,10 +4,10 @@
   <text x="20" y="26" font-size="14" font-weight="700" fill="#111111">Progreso del proyecto — basketball-visualizer</text>
   <text x="20" y="42" font-size="10" fill="#888888">Ene – Jun 2026  ·  Kanban + CRISP-DM  ·  Gonzalo del Fraile Andújar</text>
   <rect x="20" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="32" y="83" font-size="21" font-weight="800" fill="#111111">51</text>
+  <text x="32" y="83" font-size="21" font-weight="800" fill="#111111">53</text>
   <text x="32" y="97" font-size="10" fill="#888888">tareas totales</text>
   <rect x="190" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="202" y="83" font-size="21" font-weight="800" fill="#111111">51</text>
+  <text x="202" y="83" font-size="21" font-weight="800" fill="#111111">53</text>
   <text x="202" y="97" font-size="10" fill="#888888">completadas</text>
   <rect x="360" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
   <text x="372" y="83" font-size="21" font-weight="800" fill="#111111">100%</text>
@@ -33,47 +33,47 @@
   <rect x="178.0" y="150" width="46.6" height="26" fill="#64748B22" rx="4"/>
   <rect x="178.0" y="150" width="46.6" height="26" fill="#64748B" rx="4" opacity="0.85"/>
   <text x="230.6" y="167" font-size="10" fill="#999999">2/2</text>
-  <text x="170" y="201" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Core & Infra</text>
+  <text x="170" y="201" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Core &amp; Infra</text>
   <rect x="247.8" y="184" width="468.9" height="26" fill="#3B82F622" rx="4"/>
   <rect x="247.8" y="184" width="468.9" height="26" fill="#3B82F6" rx="4" opacity="0.85"/>
   <text x="722.7" y="201" font-size="10" fill="#999999">16/16</text>
   <rect x="0" y="217" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="235" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Detección & Tracking</text>
+  <text x="170" y="235" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Detección &amp; Tracking</text>
   <rect x="224.6" y="218" width="492.2" height="26" fill="#F9731622" rx="4"/>
   <rect x="224.6" y="218" width="492.2" height="26" fill="#F97316" rx="4" opacity="0.85"/>
   <text x="722.7" y="235" font-size="10" fill="#999999">6/6</text>
-  <text x="170" y="269" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Geometría & Homografía</text>
+  <text x="170" y="269" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Geometría &amp; Homografía</text>
   <rect x="291.1" y="252" width="119.7" height="26" fill="#CA8A0422" rx="4"/>
   <rect x="291.1" y="252" width="119.7" height="26" fill="#CA8A04" rx="4" opacity="0.85"/>
   <text x="416.8" y="269" font-size="10" fill="#999999">5/5</text>
   <rect x="0" y="285" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="303" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Identidad & Equipos</text>
+  <text x="170" y="303" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Identidad &amp; Equipos</text>
   <rect x="434.1" y="286" width="46.6" height="26" fill="#9333EA22" rx="4"/>
   <rect x="434.1" y="286" width="46.6" height="26" fill="#9333EA" rx="4" opacity="0.85"/>
   <text x="486.6" y="303" font-size="10" fill="#999999">4/4</text>
-  <text x="170" y="337" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Analytics & Reglas</text>
+  <text x="170" y="337" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Analytics &amp; Reglas</text>
   <rect x="474.0" y="320" width="242.8" height="26" fill="#16A34A22" rx="4"/>
   <rect x="474.0" y="320" width="242.8" height="26" fill="#16A34A" rx="4" opacity="0.85"/>
   <text x="722.7" y="337" font-size="10" fill="#999999">9/9</text>
   <rect x="0" y="353" width="760" height="28" fill="#00000008"/>
   <text x="170" y="371" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Memoria TFG</text>
-  <rect x="700.1" y="354" width="39.9" height="26" fill="#B4530922" rx="4"/>
-  <rect x="700.1" y="354" width="39.9" height="26" fill="#B45309" rx="4" opacity="0.85"/>
-  <text x="746.0" y="371" font-size="10" fill="#999999">9/9</text>
+  <rect x="178.0" y="354" width="562.0" height="26" fill="#B4530922" rx="4"/>
+  <rect x="178.0" y="354" width="562.0" height="26" fill="#B45309" rx="4" opacity="0.85"/>
+  <text x="746.0" y="371" font-size="10" fill="#999999">11/11</text>
   <line x1="740.0" y1="136" x2="740.0" y2="384" stroke="#EF4444" stroke-width="1.5"/>
   <text x="737.0" y="138" font-size="9" text-anchor="end" fill="#EF4444" font-weight="600">Entrega</text>
   <rect x="20" y="395" width="10" height="10" fill="#64748B" rx="2"/>
   <text x="36" y="404" font-size="10" fill="#666666">Planificación</text>
   <rect x="130" y="395" width="10" height="10" fill="#3B82F6" rx="2"/>
-  <text x="146" y="404" font-size="10" fill="#666666">Core & Infra</text>
+  <text x="146" y="404" font-size="10" fill="#666666">Core &amp; Infra</text>
   <rect x="234" y="395" width="10" height="10" fill="#F97316" rx="2"/>
-  <text x="250" y="404" font-size="10" fill="#666666">Detección & Tracking</text>
+  <text x="250" y="404" font-size="10" fill="#666666">Detección &amp; Tracking</text>
   <rect x="388" y="395" width="10" height="10" fill="#CA8A04" rx="2"/>
-  <text x="404" y="404" font-size="10" fill="#666666">Geometría & Homografía</text>
+  <text x="404" y="404" font-size="10" fill="#666666">Geometría &amp; Homografía</text>
   <rect x="20" y="413" width="10" height="10" fill="#9333EA" rx="2"/>
-  <text x="36" y="422" font-size="10" fill="#666666">Identidad & Equipos</text>
+  <text x="36" y="422" font-size="10" fill="#666666">Identidad &amp; Equipos</text>
   <rect x="168" y="413" width="10" height="10" fill="#16A34A" rx="2"/>
-  <text x="184" y="422" font-size="10" fill="#666666">Analytics & Reglas</text>
+  <text x="184" y="422" font-size="10" fill="#666666">Analytics &amp; Reglas</text>
   <rect x="309" y="413" width="10" height="10" fill="#B45309" rx="2"/>
   <text x="325" y="422" font-size="10" fill="#666666">Memoria TFG</text>
   <line x1="406" y1="417" x2="418" y2="417" stroke="#EF4444" stroke-width="2"/>
