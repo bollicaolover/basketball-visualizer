@@ -11,6 +11,22 @@
 > - **Hoy:** 16 de junio de 2026 → **quedan ~10 días**
 > - **Objetivo de extensión:** 80–90 páginas con gráficas, imágenes y tablas.
 
+> ⚠️ **Aviso de coherencia (22 jun 2026).** Este es un **log de trabajo histórico**:
+> sus entradas registran, por fecha, lo que se fue haciendo en el `.docx`, y por
+> eso **no se reescriben**. Para evitar contradicciones, las **fuentes canónicas**
+> vigentes son:
+> - **Metodología:** *Kanban* (ágil, individual) — [`metodologia.md`](metodologia.md).
+>   Las menciones a «CRISP-DM», «6 fases» o «Kanban + CRISP-DM» que aparezcan más
+>   abajo quedan **superadas**; la metodología definitiva es Kanban con tablero en
+>   **GitHub Projects** (no Notion).
+> - **Cifras y cronología:** [`datos-reales-tfg.md`](datos-reales-tfg.md) — **61
+>   commits** (08-ene → 22-jun), **65 tarjetas** en el tablero (61 `Hecho` + 4
+>   `Por hacer`). Cualquier conteo anterior (43 commits, «Sprint 0–7», hashes
+>   antiguos) está obsoleto.
+> - **Capítulo 6:** [`desarrollo-cap6.md`](desarrollo-cap6.md), estructurado por
+>   las **6 áreas funcionales** del tablero (no por fases CRISP-DM).
+> - **Tablero:** [GitHub Projects #2](https://github.com/users/bollicaolover/projects/2).
+
 ---
 
 ## Registro de progreso

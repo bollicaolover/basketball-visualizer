@@ -175,8 +175,9 @@ cloud**, **esfuerzo de etiquetado** y **encaje con el dataset/​hardware**.
 > **Elegido: SAM 3 (prompt-once + re-prompt).** Las máscaras mejoran la
 > clasificación de equipo (recorte sin fondo) y dan un *foot point* preciso para
 > la proyección 2D. El coste es alto (segunda etapa más cara del pipeline) y la
-> **deriva en vídeos largos** motivó una iteración CRISP-DM (intento de segmentar
-> sesiones SAM, finalmente revertido — ver E-3 en [`metodologia.md`](metodologia.md)).
+> **deriva en vídeos largos** motivó una iteración (tarjeta [ANL-3]: intento de
+> segmentar sesiones SAM, finalmente revertido — ver §4 en
+> [`metodologia.md`](metodologia.md)).
 
 #### C) OCR de dorsal: SmolVLM2 (VLM) vs. PARSeq (OCR clásico)
 

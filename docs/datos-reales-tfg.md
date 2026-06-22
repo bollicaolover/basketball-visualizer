@@ -1,63 +1,51 @@
 # Datos reales del proyecto (para la memoria del TFG)
 
-> Extraídos del repositorio y los logs el **16 jun 2026**. Úsense para sustituir
-> las cifras y narrativas inventadas de la plantilla. **Regla: no inventar.** Lo
-> que no esté medido aquí se marca como *pendiente de medición*, no se rellena.
+> Métricas extraídas del repositorio y los logs el **16 jun 2026**; cronología y
+> referencias a *commits* **actualizadas el 22 jun 2026** tras la reconstrucción
+> del historial de git. Úsense para sustituir las cifras y narrativas inventadas
+> de la plantilla. **Regla: no inventar.** Lo que no esté medido aquí se marca
+> como *pendiente de medición*, no se rellena.
 
 ## 1. Cronología real (git) — base para planificación (cap. 5) y Gantt
 
-43 commits, del **2026-01-08** al **2026-06-16**. Dos vías de trabajo en paralelo:
-pipeline ML y aplicación web (commits `[Kanban: WEB-*]`).
+**61 commits**, del **2026-01-08** al **2026-06-22**, en un **único historial lineal**
+(rama `master`) que refleja el flujo **Kanban WIP=1**: una tarjeta entregable por
+commit, sin solapamiento. El tablero de **GitHub Projects**
+([Project #2](https://github.com/users/bollicaolover/projects/2)) recoge **65
+tarjetas**: **61 `Hecho`** (una por commit, cada una enlazada al commit que la
+cierra) y **4 `Por hacer`** (diferidas, ver §6.5 de
+[`desarrollo-cap6.md`](desarrollo-cap6.md)).
 
-**Pipeline ML (fase CRISP-DM por commit):**
+> **Hito de entrega ordinaria:** 2026-05-18 (`0d84f78` [DOC-1], tag
+> `entrega-ordinaria`). La **ampliación de alcance** posterior (posesión robusta,
+> pose/reconstrucción 3D del tiro, reconocimiento de pantallas) se concentra entre
+> el 18-may y el 22-jun.
 
-| Fecha | Commit | Hito | Fase CRISP-DM |
+**Reparto por área funcional del tablero Kanban:**
+
+| Área | Commits | Tarjetas (tablero) | Rango de fechas |
 |---|---|---|---|
-| 2026-01-08 | e089e45 | Setup, requirements, notebook de referencia | Business Understanding |
-| 2026-01-15 | 9a122cb | Esqueleto pipeline + config (RF-DETR 11 clases) | Business Understanding |
-| 2026-01-22 | 71f2465 | Scripts: descarga dataset + fetch de modelos | Data Understanding |
-| 2026-02-03 | 261e036 | Detector RF-DETR local (11 clases) | Data Preparation |
-| 2026-02-11 | ddacadc | Geometría de cancha, keypoints, segmentos | Data Preparation |
-| 2026-02-18 | 4277600 | Homografía + modelo PnP de cámara | Modeling |
-| 2026-02-26 | 9730a01 | Render 2D cenital + estabilizador + suavizado | Modeling |
-| 2026-03-05 | 404127e | I/O de vídeo + interfaces de tracking | Modeling |
-| 2026-03-12 | be5eca9 | SAM3 tracker (prompt-once con RF-DETR) | Modeling |
-| 2026-03-19 | 6faee31 | Ball tracker + foot point por máscara | Modeling |
-| 2026-03-26 | 7506f54 | Clasificador de equipos SigLIP (no sup.) | Modeling |
-| 2026-04-02 | efc179e | OCR de dorsal SmolVLM2 (voto IoS) | Modeling |
-| 2026-04-09 | 0a129b2 | Roster + scripts de entrenamiento | Modeling |
-| 2026-04-16 | 2485a57 | Resolver de posesión (proximidad + clase) | Evaluation |
-| 2026-04-23 | 65fb57e | Shot tracker (eventos desde clases de acción) | Evaluation |
-| 2026-04-30 | b4c7ca3 | Orquestador principal por frame + profiling | Deployment |
-| 2026-05-08 | 7e775bd | run.py + run_batch.sh | Deployment |
-| 2026-05-20 | 161c5f2 | README + documento de memoria | Deployment |
+| Detección & Tracking | 8 | 9 (1 diferida) | 01-13 → 06-13 |
+| Geometría & Homografía | 4 | 4 | 02-11 → 06-17 |
+| Identidad & Equipos | 3 | 3 | 03-26 → 04-09 |
+| Analytics & Reglas | 9 | 10 (1 diferida) | 04-16 → 06-18 |
+| Core & Infrastructure | 24 | 26 (2 diferidas) | 01-08 → 06-19 |
+| Memoria TFG | 13 | 13 | 05-18 → 06-22 |
+| **Total** | **61** | **65** | **01-08 → 06-22** |
 
-**Iteración CRISP-DM real (evidencia honesta de proceso iterativo):**
-- 2026-06-14 `10e1736` — intento de segmentar sesiones SAM para frenar la deriva en vídeos largos.
-- 2026-06-14 `54ef5da` — **revertido: "approach did not work"**.
-> Es un ciclo Deployment→problema→Modeling→Evaluation→revert. Cuéntalo tal cual: probar, evaluar, descartar es CRISP-DM legítimo.
+El detalle **commit → tarjeta → área** es trazable directamente en el historial de
+git (`git log`, cada mensaje lleva el código de tarjeta, p. ej. `[DET-5]`) y en el
+tablero (campos *Área*, *Tamaño* y *Estado*). No se duplica aquí para mantener una
+única fuente de verdad y evitar desincronización.
 
-**Aplicación web (track WEB):** 29 ene → 27 may.
-
-| Fecha | Commit | Hito |
-|---|---|---|
-| 2026-01-29 | 98f541d | Backend FastAPI: config, DB init, Dockerfile |
-| 2026-02-20 | a398cac | Auth API (validación token HMAC) |
-| 2026-03-16 | 75786cf | Endpoint de subida + transcodificación por trozos |
-| 2026-04-07 | 897e09b | Endpoints de resultados + orquestación subprocess |
-| 2026-04-17 | ad4ce44 | Wrappers de visión backend + asset de cancha |
-| 2026-04-21 | 8487dd8 | Scaffold Vue 3 + Vite + design tokens |
-| 2026-04-28 | 22ced56 | Capa de servicio API + utilidades |
-| 2026-05-05 | 986ba13 | Login + composable de auth (HMAC) |
-| 2026-05-12 | 3e8d156 | Vista de subida (job, polling, config equipo) |
-| 2026-05-16 | 643a9cd | Vista de resultados (vídeo + mapa 2D sincronizados) |
-| 2026-05-19 | 49abcd2 | App shell, sidebar, modal, sparkline, stats GPU |
-| 2026-05-24 | d731242 | Metadata writer (JSON por frame) + run module + roster |
-| 2026-05-27 | b04ef53 | Docker + serve.sh + dist compilado |
-
-> Reemplaza los "Sprint 0–7" inventados de la plantilla (línea 5087) por esta
-> cronología real. Sustituye las fechas ficticias y la historia de "ID swaps en
-> Sprint 4 / PARSeq en Sprint 5".
+**Iteración revertida (evidencia honesta de proceso, área Analytics & Reglas):**
+- 2026-06-04 `5f1c64e` [ANL-3] — intento de segmentar sesiones SAM para frenar la
+  deriva de identidad en vídeos largos.
+- 2026-06-05 `b12cbb7` [ANL-3] — **revertido: «el enfoque de segmentación SAM no
+  funcionó»**.
+> Probar, medir y descartar es parte legítima del método: es un bucle de
+> retroalimentación característico de **Kanban** (flujo continuo), no de fases
+> cerradas. La tarjeta se abrió, se evaluó y se cerró revirtiendo el cambio.
 
 ## 2. OCR de dorsal — entrenamiento real (de `train_jersey.log`)
 
@@ -118,8 +106,8 @@ la inferencia de `pipeline/identity/number_ocr.py`):
 `player-shot-block`(8), `referee`(9), `rim`(10).
 
 > Las clases 6–8 son **acciones detectadas por el propio detector** (no por
-> pose). El **shot tracker** (commit 65fb57e) detecta lanzamientos a partir de
-> estas clases + `ball-in-basket`. Por eso O5 (posesión + tiros) es real:
+> pose). El **shot tracker** (commit `542b11e` [ANL-2]) detecta lanzamientos a
+> partir de estas clases + `ball-in-basket`. Por eso O5 (posesión + tiros) es real:
 > no usa ViTPose/ST-GCN. El "reconocimiento de acciones por pose" de la
 > plantilla nunca se implementó.
 
@@ -179,10 +167,10 @@ frames) en A100-40GB. Resultados en [`perf-results.json`](perf-results.json).
 
 ## 6. Componentes NO implementados (mantener fuera del cuerpo, solo en Vías futuras)
 
-- **Motor experto / reglas tácticas**: `backend/app/core/expert/{engine,rules}.py` → **0 líneas** (commit WEB-B5 `7d9edf5` añadió ficheros vacíos).
+- **Motor experto / reglas tácticas**: `backend/app/core/expert/{engine,rules}.py` → **0 líneas** (el andamiaje del backend, commit `2a09f75` [CORE-7], creó estos ficheros vacíos como vías futuras).
 - **Clasificador GNN de jugadas**: `backend/app/core/classifier/{model,graph_builder,inference}.py` → **0 líneas**.
 - **Reconocimiento de acciones por pose** (ViTPose/ST-GCN/PoseConv3D): no existe.
 - Todo `backend/app/core/` = 0 líneas (andamiaje). La lógica real del backend está en `backend/app/main.py` + `chunking.py`.
 
 > ⚠️ No afirmar en la memoria que el GNN o el motor experto están implementados.
-> El commit WEB-B5 los "añade" pero son ficheros vacíos.
+> El andamiaje (`2a09f75` [CORE-7]) crea esos ficheros, pero están vacíos.
