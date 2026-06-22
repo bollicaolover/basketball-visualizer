@@ -1,81 +1,76 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" width="760" height="440">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 406" width="760" height="406">
   <defs><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}</style></defs>
-  <rect width="760" height="440" fill="#ffffff"/>
+  <rect width="760" height="406" fill="#ffffff"/>
   <text x="20" y="26" font-size="14" font-weight="700" fill="#111111">Progreso del proyecto — basketball-visualizer</text>
-  <text x="20" y="42" font-size="10" fill="#888888">Ene – Jun 2026  ·  Kanban + CRISP-DM  ·  Gonzalo del Fraile Andújar</text>
+  <text x="20" y="42" font-size="10" fill="#888888">Ene – Jun 2026  ·  Kanban (flujo único, WIP=1)  ·  Gonzalo del Fraile Andújar</text>
   <rect x="20" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="32" y="83" font-size="21" font-weight="800" fill="#111111">53</text>
+  <text x="32" y="83" font-size="21" font-weight="800" fill="#111111">65</text>
   <text x="32" y="97" font-size="10" fill="#888888">tareas totales</text>
   <rect x="190" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="202" y="83" font-size="21" font-weight="800" fill="#111111">53</text>
+  <text x="202" y="83" font-size="21" font-weight="800" fill="#111111">61</text>
   <text x="202" y="97" font-size="10" fill="#888888">completadas</text>
   <rect x="360" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="372" y="83" font-size="21" font-weight="800" fill="#111111">100%</text>
+  <text x="372" y="83" font-size="21" font-weight="800" fill="#111111">94%</text>
   <text x="372" y="97" font-size="10" fill="#888888">progreso global</text>
   <rect x="530" y="54" width="160" height="50" fill="#F5F5F5" rx="7"/>
-  <text x="542" y="83" font-size="21" font-weight="800" fill="#111111">✓</text>
-  <text x="542" y="97" font-size="10" fill="#888888">proyecto entregado</text>
-  <rect x="178" y="132" width="582" height="258" fill="#F9F9F9" rx="5"/>
-  <line x1="178.0" y1="136" x2="178.0" y2="384" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="542" y="83" font-size="21" font-weight="800" fill="#111111">4</text>
+  <text x="542" y="97" font-size="10" fill="#888888">tarjetas diferidas</text>
+  <rect x="178" y="132" width="582" height="224" fill="#F9F9F9" rx="5"/>
+  <line x1="178.0" y1="136" x2="178.0" y2="350" stroke="#E5E5E5" stroke-width="1"/>
   <text x="181.0" y="138" font-size="10" fill="#BBBBBB">Ene</text>
-  <line x1="257.8" y1="136" x2="257.8" y2="384" stroke="#E5E5E5" stroke-width="1"/>
-  <text x="260.8" y="138" font-size="10" fill="#BBBBBB">Feb</text>
-  <line x1="350.9" y1="136" x2="350.9" y2="384" stroke="#E5E5E5" stroke-width="1"/>
-  <text x="353.9" y="138" font-size="10" fill="#BBBBBB">Mar</text>
-  <line x1="454.0" y1="136" x2="454.0" y2="384" stroke="#E5E5E5" stroke-width="1"/>
-  <text x="457.0" y="138" font-size="10" fill="#BBBBBB">Abr</text>
-  <line x1="553.8" y1="136" x2="553.8" y2="384" stroke="#E5E5E5" stroke-width="1"/>
-  <text x="556.8" y="138" font-size="10" fill="#BBBBBB">May</text>
-  <line x1="656.9" y1="136" x2="656.9" y2="384" stroke="#E5E5E5" stroke-width="1"/>
-  <text x="659.9" y="138" font-size="10" fill="#BBBBBB">Jun</text>
-  <rect x="0" y="149" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="167" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Planificación</text>
-  <rect x="178.0" y="150" width="46.6" height="26" fill="#64748B22" rx="4"/>
-  <rect x="178.0" y="150" width="46.6" height="26" fill="#64748B" rx="4" opacity="0.85"/>
-  <text x="230.6" y="167" font-size="10" fill="#999999">2/2</text>
-  <text x="170" y="201" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Core &amp; Infra</text>
-  <rect x="247.8" y="184" width="468.9" height="26" fill="#3B82F622" rx="4"/>
-  <rect x="247.8" y="184" width="468.9" height="26" fill="#3B82F6" rx="4" opacity="0.85"/>
-  <text x="722.7" y="201" font-size="10" fill="#999999">16/16</text>
-  <rect x="0" y="217" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="235" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Detección &amp; Tracking</text>
-  <rect x="224.6" y="218" width="492.2" height="26" fill="#F9731622" rx="4"/>
-  <rect x="224.6" y="218" width="492.2" height="26" fill="#F97316" rx="4" opacity="0.85"/>
-  <text x="722.7" y="235" font-size="10" fill="#999999">6/6</text>
-  <text x="170" y="269" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Geometría &amp; Homografía</text>
-  <rect x="291.1" y="252" width="119.7" height="26" fill="#CA8A0422" rx="4"/>
-  <rect x="291.1" y="252" width="119.7" height="26" fill="#CA8A04" rx="4" opacity="0.85"/>
-  <text x="416.8" y="269" font-size="10" fill="#999999">5/5</text>
-  <rect x="0" y="285" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="303" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Identidad &amp; Equipos</text>
-  <rect x="434.1" y="286" width="46.6" height="26" fill="#9333EA22" rx="4"/>
-  <rect x="434.1" y="286" width="46.6" height="26" fill="#9333EA" rx="4" opacity="0.85"/>
-  <text x="486.6" y="303" font-size="10" fill="#999999">4/4</text>
-  <text x="170" y="337" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Analytics &amp; Reglas</text>
-  <rect x="474.0" y="320" width="242.8" height="26" fill="#16A34A22" rx="4"/>
-  <rect x="474.0" y="320" width="242.8" height="26" fill="#16A34A" rx="4" opacity="0.85"/>
-  <text x="722.7" y="337" font-size="10" fill="#999999">9/9</text>
-  <rect x="0" y="353" width="760" height="28" fill="#00000008"/>
-  <text x="170" y="371" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Memoria TFG</text>
-  <rect x="178.0" y="354" width="562.0" height="26" fill="#B4530922" rx="4"/>
-  <rect x="178.0" y="354" width="562.0" height="26" fill="#B45309" rx="4" opacity="0.85"/>
-  <text x="746.0" y="371" font-size="10" fill="#999999">11/11</text>
-  <line x1="740.0" y1="136" x2="740.0" y2="384" stroke="#EF4444" stroke-width="1.5"/>
-  <text x="737.0" y="138" font-size="9" text-anchor="end" fill="#EF4444" font-weight="600">Entrega</text>
-  <rect x="20" y="395" width="10" height="10" fill="#64748B" rx="2"/>
-  <text x="36" y="404" font-size="10" fill="#666666">Planificación</text>
-  <rect x="130" y="395" width="10" height="10" fill="#3B82F6" rx="2"/>
-  <text x="146" y="404" font-size="10" fill="#666666">Core &amp; Infra</text>
-  <rect x="234" y="395" width="10" height="10" fill="#F97316" rx="2"/>
-  <text x="250" y="404" font-size="10" fill="#666666">Detección &amp; Tracking</text>
-  <rect x="388" y="395" width="10" height="10" fill="#CA8A04" rx="2"/>
-  <text x="404" y="404" font-size="10" fill="#666666">Geometría &amp; Homografía</text>
-  <rect x="20" y="413" width="10" height="10" fill="#9333EA" rx="2"/>
-  <text x="36" y="422" font-size="10" fill="#666666">Identidad &amp; Equipos</text>
-  <rect x="168" y="413" width="10" height="10" fill="#16A34A" rx="2"/>
-  <text x="184" y="422" font-size="10" fill="#666666">Analytics &amp; Reglas</text>
-  <rect x="309" y="413" width="10" height="10" fill="#B45309" rx="2"/>
-  <text x="325" y="422" font-size="10" fill="#666666">Memoria TFG</text>
-  <line x1="406" y1="417" x2="418" y2="417" stroke="#EF4444" stroke-width="2"/>
-  <text x="422" y="422" font-size="10" fill="#666666">Entrega (26 jun)</text>
+  <line x1="259.7" y1="136" x2="259.7" y2="350" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="262.7" y="138" font-size="10" fill="#BBBBBB">Feb</text>
+  <line x1="355.1" y1="136" x2="355.1" y2="350" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="358.1" y="138" font-size="10" fill="#BBBBBB">Mar</text>
+  <line x1="460.7" y1="136" x2="460.7" y2="350" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="463.7" y="138" font-size="10" fill="#BBBBBB">Abr</text>
+  <line x1="562.9" y1="136" x2="562.9" y2="350" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="565.9" y="138" font-size="10" fill="#BBBBBB">May</text>
+  <line x1="668.5" y1="136" x2="668.5" y2="350" stroke="#E5E5E5" stroke-width="1"/>
+  <text x="671.5" y="138" font-size="10" fill="#BBBBBB">Jun</text>
+  <rect x="0" y="149" width="760" height="28" fill="#000000" opacity="0.04"/>
+  <text x="170" y="167" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Detección &amp; Tracking</text>
+  <rect x="195.0" y="150" width="514.3" height="26" fill="#F9731622" rx="4"/>
+  <rect x="195.0" y="150" width="457.2" height="26" fill="#F97316" rx="4" opacity="0.85"/>
+  <text x="715.3" y="167" font-size="10" fill="#999999">8/9</text>
+  <text x="170" y="201" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Geometría &amp; Homografía</text>
+  <rect x="293.8" y="184" width="429.2" height="26" fill="#CA8A0422" rx="4"/>
+  <rect x="293.8" y="184" width="429.2" height="26" fill="#CA8A04" rx="4" opacity="0.85"/>
+  <text x="715.0" y="201" font-size="10" text-anchor="end" fill="#ffffff" font-weight="600">4/4</text>
+  <rect x="0" y="217" width="760" height="28" fill="#000000" opacity="0.04"/>
+  <text x="170" y="235" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Identidad &amp; Equipos</text>
+  <rect x="440.3" y="218" width="47.7" height="26" fill="#9333EA22" rx="4"/>
+  <rect x="440.3" y="218" width="47.7" height="26" fill="#9333EA" rx="4" opacity="0.85"/>
+  <text x="494.0" y="235" font-size="10" fill="#999999">3/3</text>
+  <text x="170" y="269" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Analytics &amp; Reglas</text>
+  <rect x="511.8" y="252" width="214.6" height="26" fill="#16A34A22" rx="4"/>
+  <rect x="511.8" y="252" width="193.1" height="26" fill="#16A34A" rx="4" opacity="0.85"/>
+  <text x="718.4" y="269" font-size="10" text-anchor="end" fill="#ffffff" font-weight="600">9/10</text>
+  <rect x="0" y="285" width="760" height="28" fill="#000000" opacity="0.04"/>
+  <text x="170" y="303" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Core &amp; Infrastructure</text>
+  <rect x="178.0" y="286" width="551.8" height="26" fill="#3B82F622" rx="4"/>
+  <rect x="178.0" y="286" width="509.3" height="26" fill="#3B82F6" rx="4" opacity="0.85"/>
+  <text x="721.8" y="303" font-size="10" text-anchor="end" fill="#ffffff" font-weight="600">24/26</text>
+  <text x="170" y="337" font-size="11" text-anchor="end" fill="#222222" font-weight="500">Memoria TFG</text>
+  <rect x="620.8" y="320" width="119.2" height="26" fill="#B4530922" rx="4"/>
+  <rect x="620.8" y="320" width="119.2" height="26" fill="#B45309" rx="4" opacity="0.85"/>
+  <text x="732.0" y="337" font-size="10" text-anchor="end" fill="#ffffff" font-weight="600">13/13</text>
+  <line x1="620.8" y1="136" x2="620.8" y2="350" stroke="#F59E0B" stroke-width="1.3" stroke-dasharray="5,4"/>
+  <text x="617.8" y="138" font-size="9" text-anchor="end" fill="#B45309" font-weight="600">Ordinaria</text>
+  <line x1="740.0" y1="136" x2="740.0" y2="350" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="737.0" y="138" font-size="9" text-anchor="end" fill="#EF4444" font-weight="600">Final</text>
+  <rect x="20" y="361" width="10" height="10" fill="#F97316" rx="2"/>
+  <text x="36" y="370" font-size="10" fill="#666666">Detección &amp; Tracking</text>
+  <rect x="174" y="361" width="10" height="10" fill="#CA8A04" rx="2"/>
+  <text x="190" y="370" font-size="10" fill="#666666">Geometría &amp; Homografía</text>
+  <rect x="341" y="361" width="10" height="10" fill="#9333EA" rx="2"/>
+  <text x="357" y="370" font-size="10" fill="#666666">Identidad &amp; Equipos</text>
+  <rect x="489" y="361" width="10" height="10" fill="#16A34A" rx="2"/>
+  <text x="505" y="370" font-size="10" fill="#666666">Analytics &amp; Reglas</text>
+  <rect x="20" y="379" width="10" height="10" fill="#3B82F6" rx="2"/>
+  <text x="36" y="388" font-size="10" fill="#666666">Core &amp; Infrastructure</text>
+  <rect x="180" y="379" width="10" height="10" fill="#B45309" rx="2"/>
+  <text x="196" y="388" font-size="10" fill="#666666">Memoria TFG</text>
+  <line x1="277" y1="383" x2="289" y2="383" stroke="#EF4444" stroke-width="2"/>
+  <text x="293" y="388" font-size="10" fill="#666666">Entrega final (22 jun)</text>
 </svg>

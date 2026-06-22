@@ -52,3 +52,6 @@ docs/uml/plantuml.jar
 deploy/apptainer/build.exit
 # Pesos empaquetados para portar (los genera bundle_models.sh; no versionar)
 deploy/apptainer/models_bundle/
+
+# Caché de build de Vite (frontend)
+frontend/.vite/

@@ -2,78 +2,89 @@
 """
 Genera docs/cfd.svg (CFD completo) y docs/cfd_m{n}_*.svg (snapshots por hito).
 
-El proyecto se gestionó con DOS flujos Kanban en paralelo, cada uno con WIP=1:
-  - Programación  (tareas técnicas del sistema)
-  - Documentación (capítulos de la memoria, desarrollados de forma CONTINUA
-                   durante todo el proyecto)
-Por eso el WIP combinado puede llegar a 2 (1 tarjeta de programación + 1 de
-documentación activas a la vez).
+Cumulative Flow Diagram del proyecto, gestionado con **Kanban de flujo único y
+WIP=1** (una sola tarjeta activa en cada momento). El diagrama es *data-derived*:
+la curva «Hecho» se construye a partir del **historial real de git** (una tarjeta
+entregable por commit), de modo que es verificable frente al repositorio.
 
-Modelo de datos: dos series acumuladas (programación y documentación) que se
-combinan en un único CFD apilado. Para añadir/editar un hito, modifica las
-listas y ejecuta:
+Modelo:
+  - Hecho   : commits acumulados leídos de `git log` (61 commits, 8-ene → 22-jun).
+  - Scope   : backlog planificado; crece con el *scope discovery* (rework + la
+              ampliación de alcance posterior a la entrega ordinaria del 18-may).
+              Es una estimación de planificación, no una magnitud medida.
+  - WIP=1   : una tarjeta en progreso entre el inicio y la entrega final.
+  - El hueco final entre Scope (65) y Hecho (61) son las **4 tarjetas diferidas**.
+
+Para regenerar:
     python3 scripts/generate_cfd_svg.py
 """
+import subprocess
+from datetime import date
 from pathlib import Path
 
-# ── Series acumuladas: (día desde 8-ene-2026, tareas hechas) ──────────────────
-# Flujo de PROGRAMACIÓN: 51 tarjetas técnicas; 46 completadas, 5 diferidas.
-# El repunte de junio refleja la refactorización del pipeline a módulos y la
-# ampliación de alcance (reconocimiento de pantallas / bloqueos).
-PROG_DONE = [
-    (  0,  0), (  7,  1), ( 21,  2), ( 26,  3), ( 34,  4), ( 43,  5),
-    ( 49,  6), ( 56,  7), ( 63,  8), ( 70,  9), ( 77, 10), ( 85, 11),
-    ( 90, 12), ( 99, 13), (104, 14), (113, 15), (118, 16), (125, 17),
-    (132, 18), (140, 19), (157, 21), (159, 24), (160, 28), (162, 34),
-    (164, 40), (166, 43), (168, 46),
-]
-# Scope de programación: crece al descubrirse nuevas mejoras técnicas.
-PROG_SCOPE = [(0, 42), (34, 44), (52, 46), (70, 48), (90, 51)]
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
 
-# Flujo de DOCUMENTACIÓN: 11 capítulos de la memoria, todos completados.
-# Desarrollo continuo a lo largo de todo el proyecto (no concentrado al final).
-# (día, hechos)  —  cada escalón es un capítulo cerrado.
-DOC_DONE = [
-    (  0, 0), ( 10, 1), ( 25, 2), ( 45, 3), ( 65, 4), ( 95, 5),
-    (135, 6), (150, 7), (158, 8), (162, 9), (165, 10), (168, 11),
-]
-DOC_SCOPE_TOTAL = 11        # conocido desde el inicio (índice oficial de la memoria)
+START = date(2026, 1, 8)
+FINAL = date(2026, 6, 22)
+ORDINARIA = date(2026, 5, 18)
 
-# Ventanas de actividad (para el band de WIP). 0 = inactivo.
-DOC_START_DAY = 5           # la redacción arranca pocos días después del inicio
-DELIVERY_DAY  = 168         # en la entrega ya no hay nada "en progreso"
+MAX_DAYS = (FINAL - START).days          # 165
+DELIVERY_DAY = MAX_DAYS                   # entrega final
+ORD_DAY = (ORDINARIA - START).days        # 130
+MAX_SCOPE = 70                            # headroom del eje Y
 
-MAX_DAYS  = 169   # duración del proyecto
-MAX_SCOPE = 62    # scope total (51 programación + 11 documentación)
+# ── Curva «Hecho» desde git (fallback embebido si no hay repo) ────────────────
+def done_series_from_git() -> list:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "log", "--reverse", "--date=short", "--pretty=%ad"],
+            capture_output=True, text=True, check=True).stdout
+        days = {}
+        cum = 0
+        pts = [(0, 0)]
+        offs = []
+        for line in out.splitlines():
+            y, m, d = map(int, line.strip().split("-"))
+            offs.append((date(y, m, d) - START).days)
+        from collections import Counter
+        byday = Counter(offs)
+        for off in sorted(byday):
+            cum += byday[off]
+            pts.append((off, cum))
+        if pts[-1][1] >= 60:
+            return pts
+    except Exception as e:
+        print("  (aviso: no se pudo leer git, uso curva embebida)", e)
+    # Fallback: 61 commits reales (8-ene → 22-jun)
+    return [(0,0),(0,1),(5,2),(10,3),(14,4),(19,5),(34,6),(41,7),(43,8),(49,9),
+            (56,10),(63,11),(67,12),(70,13),(77,14),(84,15),(89,16),(91,17),(96,18),
+            (98,19),(103,20),(104,21),(110,22),(112,23),(117,24),(120,25),(124,26),
+            (128,27),(130,28),(131,29),(136,30),(139,31),(140,32),(147,34),(148,35),
+            (152,36),(154,38),(157,40),(160,49),(161,51),(162,53),(163,56),(164,59),
+            (165,61)]
 
-# ── Hitos para snapshots ──────────────────────────────────────────────────────
-# (día, slug_archivo, título, fecha_legible)
+DONE = done_series_from_git()
+
+# Scope: backlog planificado (estimación). Sube con la ampliación tras la ordinaria.
+SCOPE = [(0, 55), (ORD_DAY, 65)]
+DISCOVERIES = [(ORD_DAY, 65, "ampliación de alcance (may–jun)")]
+
+# ── Hitos para snapshots: (día, slug, título, fecha_legible) ──────────────────
 MILESTONES = [
-    ( 49, "m1_geometria",  "Geometría y homografía completas",         "26 feb 2026"),
-    ( 70, "m2_tracking",   "Tracking de jugadores y balón",            "19 mar 2026"),
-    ( 92, "m3_identidad",  "Identidad de equipos (SigLIP+VLM2)",       " 9 abr 2026"),
-    (113, "m4_pipeline",   "Pipeline ejecutable de extremo a extremo", "30 abr 2026"),
-    (140, "m5_webapp",     "Web app completa + Docker",                "27 may 2026"),
-    (168, "m6_entrega",    "Entrega final",                            "25 jun 2026"),
+    ( 49, "m1_geometria",  "Geometría y homografía",                "26 feb 2026"),
+    ( 91, "m2_identidad",  "Identidad de equipos (SigLIP + VLM)",   " 9 abr 2026"),
+    (112, "m3_pipeline",   "Pipeline ejecutable de extremo a extremo","30 abr 2026"),
+    (ORD_DAY, "m4_entrega_ordinaria", "Entrega ordinaria",          "18 may 2026"),
+    (161, "m5_tactica",    "Ampliación táctica (pose/3D/pantallas)", "18 jun 2026"),
+    (MAX_DAYS, "m6_entrega","Entrega final",                         "22 jun 2026"),
 ]
 
-MONTHS = [
-    ("Ene",  0), ("Feb", 24), ("Mar", 52),
-    ("Abr", 83), ("May",113), ("Jun",144),
-]
-
-# Marcadores de scope discovery (día, scope_total_tras_el_descubrimiento, etiqueta)
-DISCOVERIES = [
-    (34, 55, "+2 mejoras técnicas"),
-    (52, 57, "+2 mejoras técnicas"),
-    (70, 59, "+2 mejoras técnicas"),
-    (90, 62, "+3 mejoras técnicas"),
-]
+MONTHS = [("Ene", 0), ("Feb", 24), ("Mar", 52), ("Abr", 83), ("May", 113), ("Jun", 144)]
 
 
 # ── Utilidades de series ──────────────────────────────────────────────────────
-def step(series: list, day: int) -> int:
-    """Valor de una serie escalonada (último punto con d <= day)."""
+def step(series, day):
     val = series[0][1]
     for d, v in series:
         if d <= day:
@@ -83,234 +94,134 @@ def step(series: list, day: int) -> int:
     return val
 
 
-def build_data() -> list:
-    """Combina las dos series en (día, prog_done, doc_done, scope, wip)."""
-    days = sorted({d for d, _ in PROG_DONE}
-                  | {d for d, _ in PROG_SCOPE}
-                  | {d for d, _ in DOC_DONE}
-                  | {d for d, _, _ in DISCOVERIES}
-                  | {0, MAX_DAYS})
+def build_data():
+    days = sorted({d for d, _ in DONE} | {d for d, _ in SCOPE}
+                  | {d for d, _, _ in DISCOVERIES} | {0, MAX_DAYS})
     data = []
     for day in days:
-        pd = step(PROG_DONE, day)
-        ps = step(PROG_SCOPE, day)
-        dd = step(DOC_DONE, day)
-        scope = ps + DOC_SCOPE_TOTAL
-        done = pd + dd
-        wip_prog = 1 if 0 < day < DELIVERY_DAY else 0
-        wip_doc  = 1 if DOC_START_DAY <= day < DELIVERY_DAY else 0
-        wip = min(wip_prog + wip_doc, scope - done)
-        data.append((day, pd, dd, scope, wip))
+        done = step(DONE, day)
+        scope = step(SCOPE, day)
+        wip = 1 if 0 < day < DELIVERY_DAY else 0
+        wip = min(wip, max(scope - done, 0))
+        data.append((day, done, scope, wip))
     return data
 
 
-# ── Función de renderizado ─────────────────────────────────────────────────────
-W, H       = 760, 440
+# ── Render ────────────────────────────────────────────────────────────────────
+W, H = 760, 440
 ML, MR, MT, MB = 60, 28, 52, 70
 CW = W - ML - MR
 CH = H - MT - MB
 
-def cx(day: int | float) -> float: return ML + day / MAX_DAYS * CW
-def cy(val: int | float) -> float: return MT + CH - val / MAX_SCOPE * CH
+def cx(day): return ML + day / MAX_DAYS * CW
+def cy(val): return MT + CH - val / MAX_SCOPE * CH
 
-def poly(top_pts, bot_pts) -> str:
-    pts = top_pts + list(reversed(bot_pts))
-    return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-
-def pline(pts) -> str:
-    return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+def poly(top, bot): return " ".join(f"{x:.1f},{y:.1f}" for x, y in top + list(reversed(bot)))
+def pline(pts): return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
 
-def render_cfd(out_path: Path, data: list, snapshot_day: int | None = None,
-               title_label: str = "", date_str: str = "") -> None:
-    """
-    Renderiza un CFD completo o un snapshot hasta `snapshot_day`.
-    - data        : lista de (día, prog_done, doc_done, scope, wip)
-    - snapshot_day: si se indica, dibuja el marcador vertical y la región futura.
-    """
-    is_snapshot = snapshot_day is not None
+def render_cfd(out_path, data, snapshot_day=None, title_label="", date_str=""):
+    is_snap = snapshot_day is not None
+    baseP  = [(cx(d), cy(0))        for d, dn, s, w in data]
+    doneP  = [(cx(d), cy(dn))       for d, dn, s, w in data]
+    wipP   = [(cx(d), cy(dn + w))   for d, dn, s, w in data]
+    scopeP = [(cx(d), cy(s))        for d, dn, s, w in data]
 
-    # Puntos de cada banda apilada (de abajo arriba: doc → prog → wip → scope)
-    baseP    = [(cx(d), cy(0))                  for d, pd, dd, s, w in data]
-    docDoneP = [(cx(d), cy(dd))                 for d, pd, dd, s, w in data]
-    doneP    = [(cx(d), cy(pd + dd))            for d, pd, dd, s, w in data]
-    wipTopP  = [(cx(d), cy(pd + dd + w))        for d, pd, dd, s, w in data]
-    scopeP   = [(cx(d), cy(s))                  for d, pd, dd, s, w in data]
+    done_now, scope_now = data[-1][1], data[-1][2]
+    pct = round(done_now / scope_now * 100) if scope_now else 0
 
-    prog_now  = data[-1][1]
-    doc_now   = data[-1][2]
-    scope_now = data[-1][3]
-    done_now  = prog_now + doc_now
-    pct       = round(done_now / scope_now * 100) if scope_now else 0
-
-    L: list[str] = []
-
-    # ── Cabecera ──────────────────────────────────────────────────────────────
+    L = []
     L.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">')
     L.append('  <defs><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}</style></defs>')
     L.append(f'  <rect width="{W}" height="{H}" fill="#ffffff"/>')
     L.append(f'  <rect x="{ML}" y="{MT}" width="{CW}" height="{CH}" fill="#FAFAFA"/>')
 
-    # ── Título ─────────────────────────────────────────────────────────────────
-    main_title = (f'Snapshot {title_label}' if is_snapshot
+    main_title = (f'Snapshot · {title_label}' if is_snap
                   else 'Cumulative Flow Diagram — basketball-visualizer')
-    sub_title  = (f'{date_str}  ·  {done_now}/{scope_now} tareas ({pct}%)  ·  WIP≤2 (programación + documentación)'
-                  if is_snapshot
-                  else 'Ene – Jun 2026  ·  62 tareas (57 hechas, 11 de documentación continua)  ·  WIP≤2: 1 programación + 1 documentación')
+    sub_title = (f'{date_str}  ·  {done_now}/{scope_now} tarjetas ({pct}%)  ·  Kanban WIP=1'
+                 if is_snap
+                 else 'Ene – Jun 2026  ·  65 tarjetas (61 hechas · 4 diferidas)  ·  Kanban de flujo único, WIP=1')
     L.append(f'  <text x="20" y="20" font-size="13" font-weight="700" fill="#111111">{main_title}</text>')
     L.append(f'  <text x="20" y="35" font-size="10" fill="#888888">{sub_title}</text>')
 
-    # ── Cuadrícula horizontal + etiquetas Y ────────────────────────────────────
-    grid_vals = list(range(0, MAX_SCOPE + 1, 10)) + [MAX_SCOPE]
-    for v in sorted(set(grid_vals)):
-        y     = cy(v)
-        edge  = v in (0, MAX_SCOPE)
-        color = "#CBD5E1" if edge else "#E2E8F0"
-        lw    = "1.5"    if edge else "1"
-        L.append(f'  <line x1="{ML}" y1="{y:.1f}" x2="{ML+CW}" y2="{y:.1f}" stroke="{color}" stroke-width="{lw}"/>')
+    for v in sorted(set(list(range(0, MAX_SCOPE + 1, 10)) + [MAX_SCOPE])):
+        y = cy(v); edge = v in (0, MAX_SCOPE)
+        L.append(f'  <line x1="{ML}" y1="{y:.1f}" x2="{ML+CW}" y2="{y:.1f}" stroke="{"#CBD5E1" if edge else "#E2E8F0"}" stroke-width="{"1.5" if edge else "1"}"/>')
         L.append(f'  <text x="{ML-6}" y="{y+4:.1f}" font-size="10" text-anchor="end" fill="#94A3B8">{v}</text>')
-
-    # Etiqueta eje Y rotada
     lx, ly = ML - 44, MT + CH / 2
-    L.append(f'  <text x="{lx:.1f}" y="{ly:.1f}" font-size="10" fill="#64748B" text-anchor="middle"'
-             f' transform="rotate(-90,{lx:.1f},{ly:.1f})">Tareas acumuladas</text>')
+    L.append(f'  <text x="{lx:.1f}" y="{ly:.1f}" font-size="10" fill="#64748B" text-anchor="middle" transform="rotate(-90,{lx:.1f},{ly:.1f})">Tarjetas acumuladas</text>')
 
-    # ── Meses ──────────────────────────────────────────────────────────────────
     for label, day in MONTHS:
         x = cx(day)
         L.append(f'  <line x1="{x:.1f}" y1="{MT}" x2="{x:.1f}" y2="{MT+CH}" stroke="#E2E8F0" stroke-width="1"/>')
         L.append(f'  <text x="{x:.1f}" y="{MT+CH+16}" font-size="11" text-anchor="middle" fill="#94A3B8">{label}</text>')
 
-    # ── Región futura (solo en snapshots) ──────────────────────────────────────
-    if is_snapshot and snapshot_day < MAX_DAYS:
-        fx = cx(snapshot_day)
-        fw = cx(MAX_DAYS) - fx
-        L.append(f'  <rect x="{fx:.1f}" y="{MT}" width="{fw:.1f}" height="{CH}"'
-                 f' fill="#94A3B8" opacity="0.12"/>')
-        proj_y = cy(scope_now)
-        L.append(f'  <line x1="{fx:.1f}" y1="{proj_y:.1f}" x2="{cx(MAX_DAYS):.1f}" y2="{proj_y:.1f}"'
-                 f' stroke="#DC2626" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>')
+    if is_snap and snapshot_day < MAX_DAYS:
+        fx = cx(snapshot_day); fw = cx(MAX_DAYS) - fx
+        L.append(f'  <rect x="{fx:.1f}" y="{MT}" width="{fw:.1f}" height="{CH}" fill="#94A3B8" opacity="0.12"/>')
 
-    # ── Áreas apiladas ──────────────────────────────────────────────────────────
-    L.append(f'  <polygon points="{poly(scopeP, wipTopP)}" fill="#FECACA" opacity="0.75"/>')   # Por hacer / diferido
-    L.append(f'  <polygon points="{poly(wipTopP, doneP)}"  fill="#FDE68A" opacity="0.85"/>')   # En progreso (WIP)
-    L.append(f'  <polygon points="{poly(doneP, docDoneP)}" fill="#BBF7D0" opacity="0.90"/>')   # Hecho — programación
-    L.append(f'  <polygon points="{poly(docDoneP, baseP)}" fill="#99F6E4" opacity="0.95"/>')   # Hecho — documentación
+    # Bandas apiladas (abajo→arriba): Hecho · WIP · Por hacer
+    L.append(f'  <polygon points="{poly(scopeP, wipP)}" fill="#FECACA" opacity="0.75"/>')  # Por hacer/diferido
+    L.append(f'  <polygon points="{poly(wipP, doneP)}"  fill="#FDE68A" opacity="0.85"/>')  # En progreso (WIP=1)
+    L.append(f'  <polygon points="{poly(doneP, baseP)}" fill="#BBF7D0" opacity="0.92"/>')  # Hecho
+    L.append(f'  <polyline points="{pline(scopeP)}" fill="none" stroke="#DC2626" stroke-width="1" stroke-linejoin="round" stroke-dasharray="4,3"/>')
+    L.append(f'  <polyline points="{pline(doneP)}"  fill="none" stroke="#16A34A" stroke-width="1.6" stroke-linejoin="round"/>')
 
-    # Bordes
-    L.append(f'  <polyline points="{pline(scopeP)}"   fill="none" stroke="#DC2626" stroke-width="1"   stroke-linejoin="round" stroke-dasharray="4,3"/>')
-    L.append(f'  <polyline points="{pline(wipTopP)}"  fill="none" stroke="#CA8A04" stroke-width="1"   stroke-linejoin="round"/>')
-    L.append(f'  <polyline points="{pline(doneP)}"    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linejoin="round"/>')
-    L.append(f'  <polyline points="{pline(docDoneP)}" fill="none" stroke="#0D9488" stroke-width="1.2" stroke-linejoin="round"/>')
-
-    # ── Marcadores de scope discovery (solo los que ya han ocurrido) ────────────
     last_day = data[-1][0]
-    for i, (disc_day, disc_scope, disc_label) in enumerate(DISCOVERIES):
+    for disc_day, disc_scope, disc_label in DISCOVERIES:
         if disc_day > last_day:
             continue
-        x  = cx(disc_day)
-        y0 = cy(disc_scope)
-        y1 = y0 - 18
-        # Alternar anchor izq/dcha para evitar solapamiento horizontal
-        if i % 2 == 0:
-            tx, anchor = x + 3, "start"
-        else:
-            tx, anchor = x - 3, "end"
-        # Si el tallo llega demasiado cerca del borde superior, bajar la etiqueta
-        if y1 < MT + 20:
-            label_y = y0 + 14
-            y1 = max(y0 - 6, MT)   # tallo corto
-        else:
-            label_y = y1 + 1
-        L.append(f'  <line x1="{x:.1f}" y1="{y0:.1f}" x2="{x:.1f}" y2="{y1:.1f}"'
-                 f' stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>')
-        L.append(f'  <text x="{tx:.1f}" y="{label_y:.1f}" font-size="8" text-anchor="{anchor}" fill="#6366F1">{disc_label}</text>')
+        x, y0 = cx(disc_day), cy(disc_scope)
+        L.append(f'  <line x1="{x:.1f}" y1="{y0:.1f}" x2="{x:.1f}" y2="{y0-16:.1f}" stroke="#818CF8" stroke-width="1" stroke-dasharray="2,2"/>')
+        L.append(f'  <text x="{x-3:.1f}" y="{y0-18:.1f}" font-size="8" text-anchor="end" fill="#6366F1">{disc_label}</text>')
         L.append(f'  <polygon points="{x:.1f},{y0-2} {x-3:.1f},{y0-7} {x+3:.1f},{y0-7}" fill="#6366F1"/>')
 
-    # ── Etiqueta del flujo de documentación continua ────────────────────────────
-    if not is_snapshot or snapshot_day >= 95:
-        tx, ty = cx(96), cy(step(DOC_DONE, 96)) + 12
-        L.append(f'  <text x="{tx:.1f}" y="{ty:.1f}" font-size="8" fill="#0F766E" font-weight="600">'
-                 f'documentación continua (WIP=1)</text>')
-
-    # ── Marco ────────────────────────────────────────────────────────────────────
     L.append(f'  <rect x="{ML}" y="{MT}" width="{CW}" height="{CH}" fill="none" stroke="#CBD5E1" stroke-width="1"/>')
 
-    # ── Línea de entrega (siempre visible) ──────────────────────────────────────
-    dlx = cx(168)
-    L.append(f'  <line x1="{dlx:.1f}" y1="{MT}" x2="{dlx:.1f}" y2="{MT+CH}"'
-             f' stroke="#EF4444" stroke-width="1.5" stroke-dasharray="5,4"/>')
-    L.append(f'  <text x="{dlx-4:.1f}" y="{MT+12}" font-size="9" text-anchor="end"'
-             f' fill="#EF4444" font-weight="600">Entrega</text>')
+    # Entrega ordinaria (siempre) y entrega final
+    ox = cx(ORD_DAY)
+    L.append(f'  <line x1="{ox:.1f}" y1="{MT}" x2="{ox:.1f}" y2="{MT+CH}" stroke="#F59E0B" stroke-width="1.3" stroke-dasharray="5,4"/>')
+    L.append(f'  <text x="{ox-4:.1f}" y="{MT+12}" font-size="9" text-anchor="end" fill="#B45309" font-weight="600">Entrega ordinaria</text>')
+    dlx = cx(DELIVERY_DAY)
+    L.append(f'  <line x1="{dlx:.1f}" y1="{MT}" x2="{dlx:.1f}" y2="{MT+CH}" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="5,4"/>')
+    L.append(f'  <text x="{dlx-4:.1f}" y="{MT+12}" font-size="9" text-anchor="end" fill="#EF4444" font-weight="600">Entrega final</text>')
 
-    # ── Marcador vertical de snapshot ───────────────────────────────────────────
-    if is_snapshot:
+    if is_snap:
         sx = cx(snapshot_day)
-        L.append(f'  <line x1="{sx:.1f}" y1="{MT}" x2="{sx:.1f}" y2="{MT+CH}"'
-                 f' stroke="#0F172A" stroke-width="2"/>')
+        L.append(f'  <line x1="{sx:.1f}" y1="{MT}" x2="{sx:.1f}" y2="{MT+CH}" stroke="#0F172A" stroke-width="2"/>')
         L.append(f'  <rect x="{sx-13:.1f}" y="{MT+14}" width="26" height="13" fill="#ffffff" rx="2"/>')
-        L.append(f'  <text x="{sx:.1f}" y="{MT+24}" font-size="9" text-anchor="middle"'
-                 f' fill="#0F172A" font-weight="700">hoy</text>')
+        L.append(f'  <text x="{sx:.1f}" y="{MT+24}" font-size="9" text-anchor="middle" fill="#0F172A" font-weight="700">hoy</text>')
 
-    # ── Anotación sprint final TFG ──────────────────────────────────────────────
-    if not is_snapshot or snapshot_day >= 157:
-        ax, ay = cx(157), cy(step(PROG_DONE, 157) + step(DOC_DONE, 157)) - 10
-        # text-anchor="end" para que no desborde el borde derecho
-        L.append(f'  <text x="{ax-4:.1f}" y="{ay:.1f}" font-size="8" text-anchor="end" fill="#166534" font-weight="600">sprint final TFG ▲</text>')
-
-    # ── Anotación "5 diferidas" (CFD completo o snapshot final) ──────────────────
-    if not is_snapshot or snapshot_day >= 168:
-        dx, dy = cx(168) - 5, cy(scope_now) + 28  # bajado para no solapar "Entrega"
-        L.append(f'  <text x="{dx:.1f}" y="{dy:.1f}" font-size="8" text-anchor="end" fill="#991B1B">5 tareas</text>')
+    if not is_snap or snapshot_day >= MAX_DAYS:
+        dx, dy = cx(MAX_DAYS) - 5, cy(scope_now) + 26
+        L.append(f'  <text x="{dx:.1f}" y="{dy:.1f}" font-size="8" text-anchor="end" fill="#991B1B">4 tarjetas</text>')
         L.append(f'  <text x="{dx:.1f}" y="{dy+11:.1f}" font-size="8" text-anchor="end" fill="#991B1B">diferidas</text>')
 
-    # ── Leyenda (2 filas para no desbordar el ancho) ─────────────────────────────
+    leg = [("#BBF7D0", "#16A34A", "Hecho"),
+           ("#FDE68A", "#CA8A04", "En progreso (WIP=1)"),
+           ("#FECACA", "#DC2626", "Por hacer / diferido")]
     leg_y = MT + CH + 28
-    row1 = [
-        ("#BBF7D0", "#16A34A", "Hecho · programación"),
-        ("#99F6E4", "#0D9488", "Hecho · documentación"),
-        ("#FDE68A", "#CA8A04", "En progreso (WIP≤2)"),
-    ]
-    row2 = [
-        ("#FECACA", "#DC2626", "Por hacer / diferido"),
-        ("#E0E7FF", "#6366F1", "Scope discovery"),
-    ]
-    col_w = (CW + MR) // 3   # ~233px por columna
-    for j, (fill, stroke, lbl) in enumerate(row1):
+    col_w = (CW + MR) // 3
+    for j, (fill, stroke, lbl) in enumerate(leg):
         lx = ML + j * col_w
         L.append(f'  <rect x="{lx}" y="{leg_y-9}" width="14" height="10" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
         L.append(f'  <text x="{lx+19}" y="{leg_y}" font-size="10" fill="#555555">{lbl}</text>')
-    for j, (fill, stroke, lbl) in enumerate(row2):
-        lx = ML + j * col_w
-        L.append(f'  <rect x="{lx}" y="{leg_y+5}" width="14" height="10" fill="{fill}" stroke="{stroke}" stroke-width="1" rx="2"/>')
-        L.append(f'  <text x="{lx+19}" y="{leg_y+14}" font-size="10" fill="#555555">{lbl}</text>')
 
     L.append('</svg>')
-
     out_path.write_text("\n".join(L), encoding="utf-8")
-
-    if is_snapshot:
-        print(f"  ✓ {out_path.name:<30}  {date_str}  —  {done_now}/{scope_now} tareas ({pct}%)")
-    else:
-        print(f"  ✓ {out_path.name:<30}  CFD completo  —  {done_now}/{scope_now} tareas")
+    tag = f'snapshot {date_str}' if is_snap else 'CFD completo'
+    print(f"  ✓ {out_path.name:<28}  {tag:<22}  {done_now}/{scope_now} ({pct}%)")
 
 
-# ── Main ────────────────────────────────────────────────────────────────────
-docs = Path(__file__).parent.parent / "docs"
+# ── Main ──────────────────────────────────────────────────────────────────────
 DATA = build_data()
-
-print("Generando CFDs...")
-
-# 1. CFD completo
-render_cfd(docs / "cfd.svg", DATA)
-
-# 2. Snapshots por hito
+print("Generando CFDs (Kanban WIP=1, data-derived de git)...")
+render_cfd(DOCS / "cfd.svg", DATA)
 for snap_day, slug, label, date_str in MILESTONES:
-    subset = [row for row in DATA if row[0] <= snap_day]
+    subset = [r for r in DATA if r[0] <= snap_day]
     if subset and subset[-1][0] < snap_day:
         last = subset[-1]
-        subset.append((snap_day, last[1], last[2], last[3], last[4]))
-    render_cfd(docs / f"cfd_{slug}.svg", subset,
-               snapshot_day=snap_day, title_label=label, date_str=date_str)
-
-print(f"\n{1 + len(MILESTONES)} archivos generados en docs/")
+        subset.append((snap_day, last[1], last[2], last[3]))
+    render_cfd(DOCS / f"cfd_{slug}.svg", subset, snapshot_day=snap_day,
+               title_label=label, date_str=date_str)
+print(f"\n{1 + len(MILESTONES)} SVG generados en docs/")
