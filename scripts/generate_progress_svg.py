@@ -18,13 +18,17 @@ AREAS = [
     ("Geometría & Homografía", date(2026, 2, 11), date(2026, 3, 19),  5,  5, "#CA8A04"),
     ("Identidad & Equipos",    date(2026, 3, 26), date(2026, 4,  9),  4,  4, "#9333EA"),
     ("Analytics & Reglas",     date(2026, 4,  7), date(2026, 6, 19),  9,  9, "#16A34A"),
-    ("Memoria TFG",            date(2026, 6, 14), date(2026, 6, 26),  9,  9, "#B45309"),
+    ("Memoria TFG",            date(2026, 1,  8), date(2026, 6, 26), 11, 11, "#B45309"),
 ]
 # ──────────────────────────────────────────────────────────────────────────
 
 PROJECT_START = date(2026, 1, 8)
 PROJECT_END   = date(2026, 6, 26)
 AUTHOR        = "Gonzalo del Fraile Andújar"
+
+def esc(s: str) -> str:
+    """Escapa caracteres no válidos en texto XML/SVG."""
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 MONTHS = [
     ("Ene", date(2026, 1,  8)),
@@ -130,7 +134,7 @@ for i, (name, start, end, tasks, done, color) in enumerate(AREAS):
 
     add(
         f'  <text x="{CHART_X-8}" y="{ry+ROW_H//2+4}" font-size="11"'
-        f' text-anchor="end" fill="#222222" font-weight="500">{name}</text>',
+        f' text-anchor="end" fill="#222222" font-weight="500">{esc(name)}</text>',
         f'  <rect x="{x1:.1f}" y="{ry}" width="{bw_:.1f}" height="{ROW_H}"'
         f' fill="{color}22" rx="4"/>',
         f'  <rect x="{x1:.1f}" y="{ry}" width="{fw:.1f}" height="{ROW_H}"'
@@ -160,7 +164,7 @@ for row in range(2):
         else:
             add(f'  <rect x="{lx}" y="{ly-9}" width="10" height="10"'
                 f' fill="{color}" rx="2"/>')
-        add(f'  <text x="{lx+16}" y="{ly}" font-size="10" fill="#666666">{name}</text>')
+        add(f'  <text x="{lx+16}" y="{ly}" font-size="10" fill="#666666">{esc(name)}</text>')
         lx += round(len(name) * 6.3) + 28
 
 add('</svg>')
